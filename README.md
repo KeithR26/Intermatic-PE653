@@ -32,15 +32,10 @@ The installation of this device type is exactly the same as the bigpunk6 version
 1. Pair the controller to ST
 2. Install the device type and assign it to the PE653 device
 3. install the ST Multichannel SmartApp.
-
 4. Set the Debug Level to Low or High.
-
 5. Go into the IDE Live Logging on your computer. Filter the logging for only this device.
-
 6. Exercise the device type, ideally while in view of the pool.
-
 7. Take screen shots of the log data.
-
 8. Post them on the forum if you have issues.
 
 I can't promise to be super responsive but I'll do my best.
