@@ -30,9 +30,7 @@ Installation:
 The installation of this device type is exactly the same as the bigpunk6 version so I will not repeat the process of pairing and installing as this is covered extensively in the Community Forum. I wil just summarize the following:
 
 1. Pair the controller to ST
-
 2. Install the device type and assign it to the PE653 device
-
 3. install the ST Multichannel SmartApp.
 
 4. Set the Debug Level to Low or High.
