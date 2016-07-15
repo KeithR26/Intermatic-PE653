@@ -44,3 +44,8 @@ Known Issues:
 * The code is not allowing me set the thermostats for the pool or spa. It reads them if I set them with the remote, but nothing I have done allows me to change the settings. I have not been able to crack this one.
 
 * I am stil having some issues with the switches setting their state correctly in some cases. I can see that the events are firing but sometimes the switch in the mobile UI does not change even though the device does respond to the commands.
+
+Disclaimers:
+* This code should be considered experimental. It has only been tested by me and only for limited applications.
+* If you have a working device type now, be very sure you save a backup copy of that code so you can easily backtrack if needed.
+* This code was tested against Intermatic PR653 v3.4, and may not work appropriately against other firmware versions (even though I am hopefull it will work on prior firmware versions as well).
