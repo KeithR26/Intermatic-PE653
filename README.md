@@ -23,6 +23,20 @@ Release Notes, Version 2.01  08/10/2016:
 5. A new option has been added to allow configuring the delay between Z-wave commands. The default is 1000 milliseconds. This was the fixed value used in the previous version. Initial tests I have done suggest this could be much small, which will improve respobse time, but if too small may compromise reliability. For the adventurous, feel free to trying reducing this delay and see how far toward zero you can get.
 6. Added a diagnostic mode (Debug Leve = High) which attemppts to interrogate every PE653 configuration page and displays this information in the logs. This causes a lot of message traffic so don't enable High level for an ongoing basis.
 
+7. If you are using the ST Multichannel SmartApp, this version requires that you remove then reinstall that SmartApp in order for it to recognize the new endpoints. The 10 endpoints now implemented are as follows:
+Switch Endpoint 1 --> Pool Circuit #1
+Switch Endpoint 2 --> Pool Circuit #2
+Switch Endpoint 3 --> Pool Circuit #3
+Switch Endpoint 4 --> Pool Circuit #4
+Switch Endpoint 5 --> Pool Circuit #5
+Switch Endpoint 6 --> Pool / Spa mode toggle
+Switch Endpoint 7 --> VSP Speed 1
+Switch Endpoint 8 --> VSP Speed 2
+Switch Endpoint 9 --> VSP Speed 3
+Switch Endpoint 10 --> VSP Speed 4
+
+After you reinstall the ST Multichannel SA you are free to rename the endpoints or even remove unwanted endpoints. Note: You are not required to install the Multichannel SA if you only instend to use the DTH UI and don't want to see the Endpoints in the "things" list.
+
 
 
 
