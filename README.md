@@ -1,4 +1,4 @@
- Intermatic-PE653
+Intermatic-PE653
 SmartThings Z-Wave Device Type for the Intermatic PE653 Pool Controller
 
 Overview:
@@ -10,7 +10,23 @@ Current Author: @KeithR26
 Original Author: @bigpunk6
 Full credit goes to bigpunk6, without whom this derivation never would have come to light.
 
-New Features:
+Release Notes, Version 2.01  08/10/2016:
+
+1. This release delivers a major UI redesign. The Thermostat control was overly large while providing limited utility. As I added 9 buttons for the pool circuits and VSP speeds the UI had gotten disorganized and long, requiring scrolling. I took some inspriration from the PE953 remote, which lists the 5 pool circuits across the top. I opted for small buttons to enable a compact, single page display format. I'm hoping everyone is ok with the button size. Note that the one remaining large button is to the left of the pool temperature. The button only appears if you have "both" pool & spa, othewise the button is hidden. Similarly, if you have a VSP, then four small buttons appear to the right of the temperature, otherwise they are likewise hidden. The "Power" controls are removed as they did nothing. The Speed slider now supports a "zero" value which will turn off the VSP (assuming it was turned on by this app). You can now choose an alternate icon for the app amd change pool/spa mode on the "Things" page.
+
+2. Extended the "Pump Type" configuration to add options for VSP. If you have a VSP it is important to set this using the settings "gear" to enable the VSP buttons. So far I cannot detect whether or not the PE653 has a VSP since it appears to be dynamically detected, and does not appear on a configuration page that I can see. Someday I hope to detect this from the controller.
+
+3. Changed the ST "things" exposed by the Multi-channel SmartApp for the VSP from a "dimmer" to four separate on/off switches (Switch Endpoint 7-10) corresponding to the four speeds. These switches, as well as the four VSP buttons on the main UI function as "radio buttons", meaning that selecting any one of them deselects any other button that was previously on (only one on at a time). If you deselect the switch or button that is on, then the VSP is deselected and will turn off, if enabled by this app.
+
+4. Added commands to interrogate the version info from the PE653 and display it in the IDE in the device info.
+
+5. A new option has been added to allow configuring the delay between Z-wave commands. The default is 1000 milliseconds. This was the fixed value used in the previous version. Initial tests I have done suggest this could be much small, which will improve respobse time, but if too small may compromise reliability. For the adventurous, feel free to trying reducing this delay and see how far toward zero you can get.
+6. Added a diagnostic mode (Debug Leve = High) which attemppts to interrogate every PE653 configuration page and displays this information in the logs. This causes a lot of message traffic so don't enable High level for an ongoing basis.
+
+
+
+
+Release Notes, Version 2.00  07/14/2016:
 
 1. The main issue I battled with the original code is that it did not seem to work with my firmware level (v3.4). This may be due to changes made by Intermatic since the original @bigpunk6 version. Clearly the original code worked for some people. This conjecture is further supported by the fact that the Vera users group has also been unable to work with v3.4. For my version of firmware I found that it did not support the Z-Wave Multichannelv3 Command Class (0x25 version 3 in particular). My firmware does support v2 of Multichannel. Specifically I had to implement zwave.commands.multichannelv3.MultiInstanceCmdEncap instead of zwave.commands.multichannelv3.MultiChannelCmdEncap. I further verified this by polling the PE653 for its supported version level for Multichannel and it does in fact report v2.
 
