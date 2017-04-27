@@ -2,7 +2,7 @@
  *  Intermatic PE653 Pool Control System
  *
  *  Original Copyright 2014 bigpunk6
- *  Updated 2016 KeithR26
+ *  Updated 2017 KeithR26
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -39,9 +39,12 @@ metadata {
         attribute "spaSetpoint", "string"
         attribute "poolSpaMode", "string"
         attribute "pumpSpeed", "string"
+        attribute "lightColor", "string"
+        attribute "lightCircuits", "string"
 		attribute "ccVersions", "string"
 		attribute "VersionInfo", "string"
 		attribute "ManufacturerInfo", "string"
+		attribute "groups", "string"
 		attribute "debugLevel", "string"
 
 		attribute "switch1", "string"
@@ -77,6 +80,12 @@ metadata {
 		command "setVSPSpeed2"
 		command "setVSPSpeed3"
 		command "setVSPSpeed4"
+        command "setMode1"
+        command "setMode2"
+        command "setMode3"
+        command "setMode4"
+        command "setLightColor"
+        command "setColor"
 //		command "epCmd"
 //		command "enableEpEvents"
         
@@ -125,12 +134,177 @@ metadata {
         input "tempOffsetwater", "number", title: "Water temperature offset", defaultValue: 0, required: true
         input "tempOffsetair", "number",
             title: "Air temperature offset - Sets the Offset of the air temerature for the add-on Thermometer in degrees Fahrenheit -20F to +20F", defaultValue: 0, required: true
-        input "debugLevel", "enum", title: "Debug Level",
+        input "debugLevel", "enum", title: "Debug Level", multiple: "true",
         	options:[0:"Off",
             		 1:"Low",
                      2:"High"], defaultvalue: 0
         input "ZWdelay", "number",
             title: "Delay between Z-Wave commands sent (milliseconds). Suggest 1000.", defaultValue: 1000, required: true
+//        input "M1On", "enum", title: "M1: Turn these circuits On:", multiple: "true",
+//        	options:[1:"Sw1",
+//            		 2:"Sw2",
+//            		 3:"Sw3",
+//            		 4:"Sw4",
+//                   5:"Sw5"], defaultValue: 0
+//Mode 1
+        input "M1Label", "text", title: "M1: Display Name:", defaultValue: ""
+        input "M1Sw1", "enum", title: "M1: Circuit 1 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M1Sw2", "enum", title: "M1: Circuit 2 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M1Sw3", "enum", title: "M1: Circuit 3 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M1Sw4", "enum", title: "M1: Circuit 4 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M1Sw5", "enum", title: "M1: Circuit 5 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M1Mode", "enum", title: "M1: Mode to change to:", defaultValue: 0,
+        	options:[0:"No change",
+            		 1:"Pool",
+                     2:"Pool & Set Temperature",
+            		 3:"Spa",
+                     4:"Spa & Set Temperature"]
+        input "M1Temp", "number", title: "M1: Set Temperature to:", range: "40..104", defaultValue: 40
+        input "M1VSP", "enum", title: "M1: Set VSP Speed to:", defaultValue: 0,
+        	options:[5:"No change",
+            		 1:"Speed 1",
+            		 2:"Speed 2",
+            		 3:"Speed 3",
+                     4:"Speed 4",
+                     0:"Turn off"]
+//Mode 2
+        input "M2Label", "text", title: "M2: Display Name:", defaultValue: ""
+		input "M2Sw1", "enum", title: "M2: Circuit 1 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M2Sw2", "enum", title: "M2: Circuit 2 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M2Sw3", "enum", title: "M2: Circuit 3 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M2Sw4", "enum", title: "M2: Circuit 4 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M2Sw5", "enum", title: "M2: Circuit 5 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M2Mode", "enum", title: "M2: Mode to change to:", defaultValue: 0,
+        	options:[0:"No change",
+            		 1:"Pool",
+                     2:"Pool & Set Temperature",
+            		 3:"Spa",
+                     4:"Spa & Set Temperature"]
+        input "M2Temp", "number", title: "M2: Set Temperature to:", range: "40..104", defaultValue: 40
+        input "M2VSP", "enum", title: "M2: Set VSP Speed to:", defaultValue: 0,
+        	options:[5:"No change",
+            		 1:"Speed 1",
+            		 2:"Speed 2",
+            		 3:"Speed 3",
+                     4:"Speed 4",
+                     0:"Turn off"]
+//Mode 3
+        input "M3Label", "text", title: "M3: Display Name:", defaultValue: ""
+        input "M3Sw1", "enum", title: "M3: Circuit 1 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M3Sw2", "enum", title: "M3: Circuit 2 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M3Sw3", "enum", title: "M3: Circuit 3 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M3Sw4", "enum", title: "M3: Circuit 4 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M3Sw5", "enum", title: "M3: Circuit 5 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M3Mode", "enum", title: "M3: Mode to change to:", defaultValue: 0,
+        	options:[0:"No change",
+            		 1:"Pool",
+                     2:"Pool & Set Temperature",
+            		 3:"Spa",
+                     4:"Spa & Set Temperature"]
+        input "M3Temp", "number", title: "M3: Set Temperature to:", range: "40..104", defaultValue: 40
+        input "M3VSP", "enum", title: "M3: Set VSP Speed to:", defaultValue: 0,
+        	options:[5:"No change",
+            		 1:"Speed 1",
+            		 2:"Speed 2",
+            		 3:"Speed 3",
+                     4:"Speed 4",
+                     0:"Turn off"]
+//Mode 4
+        input "M4Label", "text", title: "M4: Display Name:", defaultValue: ""
+        input "M4Sw1", "enum", title: "M4: Circuit 1 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M4Sw2", "enum", title: "M4: Circuit 2 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M4Sw3", "enum", title: "M4: Circuit 3 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M4Sw4", "enum", title: "M4: Circuit 4 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M4Sw5", "enum", title: "M4: Circuit 5 action:", defaultValue: 0,
+        	options:[0:"No Change",
+            		 1:"On",
+            		 2:"Off"]
+        input "M4Mode", "enum", title: "M4: Mode to change to:", defaultValue: 0,
+        	options:[0:"No change",
+            		 1:"Pool",
+                     2:"Pool & Set Temperature",
+            		 3:"Spa",
+                     4:"Spa & Set Temperature"]
+        input "M4Temp", "number", title: "M4: Set Temperature to:", range: "40..104", defaultValue: 40
+        input "M4VSP", "enum", title: "M4: Set VSP Speed to:", defaultValue: 0,
+        	options:[5:"No change",
+            		 1:"Speed 1",
+            		 2:"Speed 2",
+            		 3:"Speed 3",
+                     4:"Speed 4",
+                     0:"Turn off"]
+        input "C1ColorEnabled", "enum", title: "Circuit 1 Color Light Enable:", defaultValue: 0,
+        	options:[0:"off",
+            		 1:"On"]
+        input "C2ColorEnabled", "enum", title: "Circuit 2 Color Light Enable:", defaultValue: 0,
+        	options:[0:"off",
+            		 1:"On"]
+        input "C3ColorEnabled", "enum", title: "Circuit 3 Color Light Enable:", defaultValue: 0,
+        	options:[0:"off",
+            		 1:"On"]
+        input "C4ColorEnabled", "enum", title: "Circuit 4 Color Light Enable:", defaultValue: 0,
+        	options:[0:"off",
+            		 1:"On"]
+        input "C5ColorEnabled", "enum", title: "Circuit 5 Color Light Enable:", defaultValue: 0,
+        	options:[0:"off",
+            		 1:"On"]
     }
 
 	simulator {
@@ -185,6 +359,16 @@ metadata {
 		valueTile("pumpSpeed", "device.pumpSpeed", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
 			state "pumpSpeed", label:'speed ${currentValue}', backgroundColor:"#ffffff"
 		}
+        controlTile("lightColorSliderControl", "device.lightColor", "slider", width: 4, height: 1, inactiveLabel: false, range:"(1..14)") {
+			state "color", action:"setLightColor", backgroundColor:"#d04e00"
+		}
+//		valueTile("temperatureTile", "device.temperature", width: 2, height: 2, inactiveLabel: true) {
+		valueTile("lightColor", "device.lightColor", width: 2, height: 1, inactiveLabel: true, decoration: "flat") {
+			state "color", action:"setColor", label:'color ${currentValue}', backgroundColor:"#ffffff"
+		}
+//		standardTile("lightColor", "device.lightColor", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
+//			state "color", action:"setColor", label:'color ${currentValue}', backgroundColor:"#ffffff", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/Pool.png"
+//		}
 
 		standardTile("poolSpaMode", "device.poolSpaMode", width: 2, height: 2, decoration: "flat") {
 			state "spa",        label: "",           action: "setPoolMode", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/spa.png",  backgroundColor: "#79b821", nextState: "turningOff"
@@ -228,28 +412,52 @@ metadata {
 			state "on",         label: "on",         action: "setVSPSpeed0", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp1-on.png",  backgroundColor: "#79b821", nextState: "turningOff"
 			state "turningOn",  label:'Turning on',  action: "setVSPSpeed0", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp1-on.png",  backgroundColor: "#79b821", nextState: "turningOff"
 			state "turningOff", label:'Turning off', action: "setVSPSpeed1", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp1-off.png", backgroundColor: "#ffffff", nextState: "turningOn"
-			state "disabled",   label:'', icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/all-white.png", backgroundColor: "#ffffff"
+			state "disabled",   label:'',                                    icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/all-white.png",backgroundColor: "#ffffff"
 		}
         standardTile("swVSP2", "device.swVSP2", width: 1, height: 1, decoration: "flat") {
 			state "off",        label: "off",        action: "setVSPSpeed2", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp2-off.png", backgroundColor: "#ffffff", nextState: "turningOn"
 			state "on",         label: "on",         action: "setVSPSpeed0", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp2-on.png",  backgroundColor: "#79b821", nextState: "turningOff"
 			state "turningOn",  label:'Turning on',  action: "setVSPSpeed0", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp2-on.png",  backgroundColor: "#79b821", nextState: "turningOff"
 			state "turningOff", label:'Turning off', action: "setVSPSpeed2", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp2-off.png", backgroundColor: "#ffffff", nextState: "turningOn"
-			state "disabled",   label:'', icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/all-white.png", backgroundColor: "#ffffff"
+			state "disabled",   label:'',                                    icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/all-white.png",backgroundColor: "#ffffff"
 		}
         standardTile("swVSP3", "device.swVSP3", width: 1, height: 1, decoration: "flat") {
 			state "off",        label: "off",        action: "setVSPSpeed3", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp3-off.png", backgroundColor: "#ffffff", nextState: "turningOn"
 			state "on",         label: "on",         action: "setVSPSpeed0", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp3-on.png",  backgroundColor: "#79b821", nextState: "turningOff"
 			state "turningOn",  label:'Turning on',  action: "setVSPSpeed0", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp3-on.png",  backgroundColor: "#79b821", nextState: "turningOff"
 			state "turningOff", label:'Turning off', action: "setVSPSpeed3", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp3-off.png", backgroundColor: "#ffffff", nextState: "turningOn"
-			state "disabled",   label:'', icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/all-white.png", backgroundColor: "#ffffff"
+			state "disabled",   label:'',                                    icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/all-white.png",backgroundColor: "#ffffff"
 		}
         standardTile("swVSP4", "device.swVSP4", width: 1, height: 1, decoration: "flat") {
 			state "off",        label: "off",        action: "setVSPSpeed4", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp4-off.png", backgroundColor: "#ffffff", nextState: "turningOn"
 			state "on",         label: "on",         action: "setVSPSpeed0", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp4-on.png",  backgroundColor: "#79b821", nextState: "turningOff"
 			state "turningOn",  label:'Turning on',  action: "setVSPSpeed0", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp4-on.png",  backgroundColor: "#79b821", nextState: "turningOff"
 			state "turningOff", label:'Turning off', action: "setVSPSpeed4", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/vsp4-off.png", backgroundColor: "#ffffff", nextState: "turningOn"
-			state "disabled",   label:'', icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/all-white.png", backgroundColor: "#ffffff"
+			state "disabled",   label:'',                                    icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/all-white.png",backgroundColor: "#ffffff"
+		}
+        standardTile("swM1", "device.swM1", width: 1, height: 1, decoration: "flat") {
+			state "disabled",   label:'',            action: "setMode1",     icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/M1-off.png",backgroundColor: "#ffffff", nextState: "disabled"
+		}
+        standardTile("swM2", "device.swM2", width: 1, height: 1, decoration: "flat") {
+			state "disabled",   label:'',            action: "setMode2",     icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/M2-off.png",backgroundColor: "#ffffff", nextState: "disabled"
+		}
+        standardTile("swM3", "device.swM3", width: 1, height: 1, decoration: "flat") {
+			state "disabled",   label:'',            action: "setMode3",     icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/M3-off.png",backgroundColor: "#ffffff", nextState: "disabled"
+		}
+        standardTile("swM4", "device.swM4", width: 1, height: 1, decoration: "flat") {
+			state "disabled",   label:'',            action: "setMode4",     icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/M4-off.png", backgroundColor:"#ffffff", nextState: "disabled"
+		}
+		valueTile("M1Name", "device.M1Name", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
+			state "M1Name", label:'${currentValue}', backgroundColor:"#ffffff", action: "setMode1"
+		}
+		valueTile("M2Name", "device.M2Name", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
+			state "M2Name", label:'${currentValue}', backgroundColor:"#ffffff", action: "setMode2"
+		}
+		valueTile("M3Name", "device.M3Name", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
+			state "M3Name", label:'${currentValue}', backgroundColor:"#ffffff", action: "setMode3"
+		}
+		valueTile("M4Name", "device.M4Name", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
+			state "M4Name", label:'${currentValue}', backgroundColor:"#ffffff", action: "setMode4"
 		}
         standardTile("blank1", "device.blank", width: 1, height: 1, decoration: "flat") {
 			state "on",         icon: "st.Health & Wellness.health2",  backgroundColor: "#ffffff"
@@ -271,9 +479,11 @@ metadata {
             "poolSpaMode",
         	"temperatureTile",
             "swVSP1","swVSP2","swVSP3","swVSP4",
+            "swM1", "M1Name", "swM2", "M2Name", "swM3", "M3Name", "swM4", "M4Name",
 			"poolSliderControl", "poolSetpoint", "spaSliderControl", "spaSetpoint",
-            "pumpSpeedSliderControl", "pumpSpeed",
-            "configure","refresh", "blank2"])
+//            "pumpSpeedSliderControl", "pumpSpeed",
+            "configure","refresh", "blank2",
+            "lightColorSliderControl","lightColor"])
 	}
 }
 
@@ -289,10 +499,14 @@ metadata {
 //									Added PE653 configuration diagnostics in Debug level = High
 //									Added Version Info in IDE and logs
 //									Allow changing icon
+//	2.02	04/26/2017	KeithR26	Fix Thermostat set for v3.4 firmware (force scale = 0)
+//  								Prototype Pool Light Color Control
+//									Implement simple "Macros"
 
 // Constants for PE653 configuration parameter locations
 def getDELAY () {ZWdelay}								// How long to delay between commands to device (configured)
-def getVERSION () {"Ver 2.01"}							// Keep track of handler version
+def getMIN_DELAY () {"800"}								// Minimum delay between commands to device (configured)
+def getVERSION () {"Ver 2.02"}							// Keep track of handler version
 def getPOOL_SPA_SCHED_PARAM () { 21 }					// Pool/Spa mode Schedule #3 - 0x15
 def getVSP_SCHED_NO (int spd) { (35 + (spd * 3)) }		// VSP Speed 1 Schedule #3 - 0x26
 def getVSP_SPEED (int sched) { ((sched - 35) / 3) }		// Convert from sched to speed
@@ -342,17 +556,8 @@ def parse(String description) {
 	delayResponseLog(result)
 }
 
-def quickSetPool(degrees) {
-    log.debug "quickSetPool $degrees"
-	setPoolSetpoint(degrees, DELAY)
-}
-
-def setPoolSetpoint(degrees, delay = 30000) {
-	setPoolSetpoint(degrees.toDouble(), delay)
-}
-
-def setPoolSetpoint(Double degrees, Integer delay = 30000) {
-	log.trace "setPoolSetpoint($degrees, $delay)"
+private List setPoolSetpointInternal(Double degrees) {
+	log.debug "setPoolSetpointInternal degrees=${degrees}"
     def cmds = []
 	def deviceScale = state.scale ?: 1
 	def deviceScaleString = deviceScale == 2 ? "C" : "F"
@@ -367,21 +572,15 @@ def setPoolSetpoint(Double degrees, Integer delay = 30000) {
     } else {
     	convertedDegrees = degrees
     }
+    deviceScale = 0			// Cannot send scale = 1 to PE653 or it will ignore the request
+//    log.trace "setPoolSetpoint: setpointType: 1  scale: $deviceScale  precision: $p  scaledValue: $convertedDegrees"
 	cmds << zwave.thermostatSetpointV1.thermostatSetpointSet(setpointType: 1, scale: deviceScale, precision: p, scaledValue: convertedDegrees)
 	cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 1)
-	delayBetweenLog(cmds, delay)
+//    cmds
 }
 
-def quickSetSpa(degrees) {
-	setSpaSetpoint(degrees, DELAY)
-}
-
-def setSpaSetpoint(degrees, delay = 30000) {
-	setSpaSetpoint(degrees.toDouble(), delay)
-}
-
-def setSpaSetpoint(Double degrees, Integer delay = 30000) {
-    log.trace "setSpaSetpoint($degrees, $delay)"
+private List setSpaSetpointInternal(Double degrees) {
+    log.debug "setSpaSetpointInternal degrees=${degrees}"
     def cmds = []
 	def deviceScale = state.scale ?: 1
 	def deviceScaleString = deviceScale == 2 ? "C" : "F"
@@ -396,10 +595,11 @@ def setSpaSetpoint(Double degrees, Integer delay = 30000) {
     } else {
     	convertedDegrees = degrees
     }
-    
+    deviceScale = 0			// Cannot send scale = 1 to PE653 ver 3.4 or it will ignore the request
+//    log.trace "setSpaSetpoint: setpointType: 7  scale: $deviceScale  precision: $p  scaledValue: $convertedDegrees"
 	cmds << zwave.thermostatSetpointV1.thermostatSetpointSet(setpointType: 7, scale: deviceScale, precision: p,  scaledValue: convertedDegrees)
 	cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 7)
-	delayBetweenLog(cmds, delay)
+//    cmds
 }
 
 //Reports
@@ -431,7 +631,9 @@ def zwaveEvent(physicalgraph.zwave.commands.thermostatsetpointv1.ThermostatSetpo
 	cmds
 }
 
+// ManufacturerSpecificReport(manufacturerId: 5, manufacturerName: Intermatic, productId: 1619, productTypeId: 20549) 
 def zwaveEvent(physicalgraph.zwave.commands.manufacturerspecificv1.ManufacturerSpecificReport cmd) {
+	log.debug "ManufacturerSpecificReport !!!"
 	state.ManufacturerInfo = "ManufacturerInfo:  manufacturerId: $manufacturerId, manufacturerName: $manufacturerName, productId: $productId, productTypeId: $productTypeId"
 	createEvent(name: "ManufacturerInfo", value: state.ManufacturerInfo, displayed: true, descriptionText: state.ManufacturerInfo)
 }
@@ -645,7 +847,6 @@ def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicGet cmd) {
 private List createEndpointInfo(int endPoints) {
 	def eps = []
 	def int endpointCnt = endPoints + 1 + 4		// 1 for Pool/Spa + 4 for VSP speed
-    log.trace "createEndpointInfo(${endPoints}) endpointCnt=$endpointCnt"
 	for (def i=1;i<=endpointCnt;i++) {
 		if (i==1) {
         	eps << "10012527"
@@ -655,6 +856,7 @@ private List createEndpointInfo(int endPoints) {
         	eps << "100025"
         }
 	}            
+    log.trace "createEndpointInfo(${endPoints}) endpointCnt=${endpointCnt} eps=${eps}"
 	eps
 }
 
@@ -846,24 +1048,40 @@ def enableEpEvents(enabledEndpoints) {
 	null
 }
 
-def poll() {
+def List poll() {
 	log.debug "+++++ poll()"
 //	refreshLight()
 	[zwave.sensorMultilevelV1.sensorMultilevelGet()]
 }
 
-def updated() {
+def List updated() {
 	log.debug "+++++ updated()  ${state.VersionInfo}"
+	initUILabels()
+	def lightCircuits = []
+	if (C1ColorEnabled == "1") {lightCircuits << 1}
+	if (C2ColorEnabled == "1") {lightCircuits << 2}
+	if (C3ColorEnabled == "1") {lightCircuits << 3}
+	if (C4ColorEnabled == "1") {lightCircuits << 4}
+	if (C5ColorEnabled == "1") {lightCircuits << 5}
+    state.lightCircuitsList = lightCircuits
+log.trace("lightCircuits=${lightCircuits}  C3ColorEnabled=${C3ColorEnabled}")    
 	configure()
 }
 
-def refresh() {
+private initUILabels() {
+	sendEvent(name: "M1Name", value: (M1Label ? "${M1Label}" : ""), isStateChange: true, displayed: true, descriptionText: "init M1 Label to ${M1Label}")
+	sendEvent(name: "M2Name", value: (M2Label ? "${M2Label}" : ""), isStateChange: true, displayed: true, descriptionText: "init M2 Label to ${M2Label}")
+	sendEvent(name: "M3Name", value: (M3Label ? "${M3Label}" : ""), isStateChange: true, displayed: true, descriptionText: "init M3 Label to ${M3Label}")
+	sendEvent(name: "M4Name", value: (M4Label ? "${M4Label}" : ""), isStateChange: true, displayed: true, descriptionText: "init M4 Label to ${M4Label}")
+}
+
+def List refresh() {
 	log.debug "+++++ refresh()  ${state.VersionInfo}"
     def cmds = []
 	cmds << zwave.versionV1.versionGet()
 	cmds << zwave.manufacturerSpecificV1.manufacturerSpecificGet()
-	cmds << zwave.associationV2.associationGroupingsGet()
-	cmds << zwave.multiInstanceV1.multiInstanceGet(commandClass:37)
+//	cmds << zwave.associationV2.associationGroupingsGet()
+//	cmds << zwave.multiInstanceV1.multiInstanceGet(commandClass:37)
  	if (debugLevel > "1") {
     	compareConfig()
         state.ccVersions = [:]
@@ -873,7 +1091,7 @@ def refresh() {
     }
     cmds.addAll(refreshLight())
 
- 	if (debugLevel <= "1") {
+ 	if (0 || debugLevel <= "1") {
         cmds << zwave.configurationV2.configurationGet(parameterNumber: 1)
         cmds << zwave.configurationV2.configurationGet(parameterNumber: 2)
         cmds << zwave.configurationV2.configurationGet(parameterNumber: 3)
@@ -883,7 +1101,7 @@ def refresh() {
 }
 
 // Used by the refresh() command and also by poll()
-private def List refreshLight() {
+private List refreshLight() {
     def cmds = []
 	cmds << zwave.sensorMultilevelV1.sensorMultilevelGet()
     cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 1)
@@ -902,13 +1120,13 @@ private def List refreshLight() {
     cmds
 }
 
-def configure() {
+def List configure() {
 	log.debug "+++++ configure()  ${state.VersionInfo}"
     def opMode2 = operationMode2.toInteger() & 0x03
 	def cmds = []
-    cmds << zwave.associationV2.associationGroupingsGet()
-    cmds << zwave.associationV2.associationSet(groupingIdentifier:1, nodeId:zwaveHubNodeId)
-    cmds << zwave.associationV2.associationGet(groupingIdentifier:1)
+//    cmds << zwave.associationV2.associationGroupingsGet()
+//    cmds << zwave.associationV2.associationSet(groupingIdentifier:1, nodeId:zwaveHubNodeId)
+//    cmds << zwave.associationV2.associationGet(groupingIdentifier:1)
 
     cmds << zwave.configurationV2.configurationSet(parameterNumber: 1,  size: 2, configurationValue: [operationMode1.toInteger(), opMode2.toInteger()])
     cmds << zwave.configurationV2.configurationSet(parameterNumber: 3,  size: 4, configurationValue: [tempOffsetwater.toInteger(), tempOffsetair.toInteger(), 0, 0])
@@ -943,7 +1161,7 @@ log.trace "POOL_SPA_COMBO:${POOL_SPA_COMBO}"
 }
 
 // Query the four VSP scheduled to determine which speed is enabled
-def List getVSPSpeed() {
+private List getVSPSpeed() {
 	def cmds = []
 	log.debug "+++++ getVSPSpeed()"
     if ( VSP_ENABLED ) {
@@ -957,18 +1175,22 @@ def List getVSPSpeed() {
 
 // Select a VSP speed by forcing the appropriate schedule to always on. speed is from 1-4
 // Called from the slider tile in the app
-def List setVSPSpeed(Integer speed) {
-	log.debug "+++++ setVSPSpeed()  `speed=${speed}"
+private List setVSPSpeedAndGet(Integer speed) {
+	log.debug "+++++ setVSPSpeedAndGet()  speed=${speed}"
 	def cmds = []
+//	def l = setVSPSpeedInternal(speed)
+//	log.trace("l = $l")
+//	cmds.addAll(l)
 	cmds.addAll(setVSPSpeedInternal(speed))
 	cmds.addAll(getVSPSpeed())
-	delayBetweenLog(cmds)
+	cmds
 }
 
 // Select a VSP speed by forcing the appropriate schedule to always on. speed is from 1-4
 // A speed of zero will disable all 4 speeds (off).
 // Called based on commands from the Multi-channel SmartApp
 private List setVSPSpeedInternal(Integer speed) {
+//	log.debug "+++++ setVSPSpeedInternal()  speed=${speed}"
 	def cmds = []
 	for (int sp=1;sp<=4;sp++) {
     	if (sp == speed) {
@@ -1004,23 +1226,23 @@ private List setPoolSpaMode(Integer val) {
     cmds
 }
 
-def List setSpaMode() {
+private List setSpaModeInternal() {
 	log.debug "+++++ setSpaMode"
 	def cmds = []
 	cmds.addAll(setPoolSpaMode(0xFF))
 	cmds.addAll(getPoolSpaMode())
-	delayBetweenLog(cmds)
+	cmds
 }
 
-def List setPoolMode() {
+private List setPoolModeInternal() {
 	log.debug "+++++ setPoolMode"
 	def cmds = []
 	cmds.addAll(setPoolSpaMode(0))
 	cmds.addAll(getPoolSpaMode())
-	delayBetweenLog(cmds)
+	cmds
 }
 
-def List togglePoolSpaMode() {
+private def List togglePoolSpaModeInternal() {
 	log.debug "+++++ togglePoolSpaMode: poolSpaMode:${device.currentValue("poolSpaMode")}"
 	def cmds = []
     if (device.currentValue("poolSpaMode").equals("spa")) {
@@ -1029,7 +1251,7 @@ def List togglePoolSpaMode() {
 		cmds.addAll(setPoolSpaMode(0xFF))
     }
 	cmds.addAll(getPoolSpaMode())
-	delayBetweenLog(cmds)
+	cmds
 }
 
 // General purpose function to set a schedule to "Always off" or "Always on"
@@ -1045,13 +1267,103 @@ private List setSched(int paramNum, Integer val) {
     }
 	cmds
 }
-
+/*
 def setPowerLevel(int pwrLvl) {
 	log.debug "+++++ setPowerLevel(${pwrLvl})"
     delayBetweenLog([
 		zwave.powerlevelV1.powerlevelSet(powerLevel: pwrLvl),
 		zwave.powerlevelV1.powerlevelGet()
     ])
+}
+*/
+def setLightColor(int col) {
+	log.debug "+++++ setColor ${col}"
+	def cmds = []
+	cmds = createEvent(name: "lightColor", value: "${col}", isStateChange: true, displayed: true, descriptionText: "Color set to ${col}")
+	delayBetweenLog(cmds)
+}
+
+def setColor() {
+	def cmds = []
+	int blinkCnt = device.currentValue("lightColor").toInteger()
+	if (blinkCnt > 14) blinkCnt = 14;
+    if (state.lightCircuitsList) {
+		cmds.addAll(blink(state.lightCircuitsList, blinkCnt))
+    }
+	delayBetweenLog(cmds)
+}
+
+
+// Alternately turn a switch off then on a fixed number of times. Used to control the color of Pentair pool lights.
+private def blink(List switches, int cnt) {
+	log.debug "+++++ blink switches=${switches} cnt=${cnt}"
+    def cmds = []
+    def dly = MIN_DELAY
+	for (int i=1; i<=cnt; i++) {
+    	switches.each { sw ->
+			if (cmds) {
+				cmds << "delay ${dly}"
+            }
+            cmds << zwave.multiInstanceV1.multiInstanceCmdEncap(instance: sw, commandClass:37, command:1, parameter:[0])
+		    dly = MIN_DELAY
+        }
+        dly = "${DELAY}"
+		switches.each { sw ->
+	        cmds << "delay ${dly}"
+            cmds << zwave.multiInstanceV1.multiInstanceCmdEncap(instance: sw, commandClass:37, command:1, parameter:[255])
+		    dly = MIN_DELAY
+        }
+        dly = "${DELAY}"
+    }
+	switches.each { sw ->
+		cmds << "delay ${dly}"
+		cmds <<	zwave.multiInstanceV1.multiInstanceCmdEncap(instance: sw, commandClass:37, command:2)
+    }
+//log.trace "blink() cmds=${cmds}"
+	cmds
+}
+
+// Called by a button press for one of the "Mode" selections  (eg: M1, M2, M3, M4)
+def setMode(int mode) {
+	def cmds = []
+	List MxSw
+	String MxMode, MxTemp, MxVSP
+//log.trace "M1Sw1=${M1Sw1} M1Sw2=${M1Sw2} M1Sw3=${M1Sw3} M1Sw4=${M1Sw4} M1Sw5=${M1Sw5} M1Mode=${M1Mode} M1Temp=${M1Temp} M1VSP=${M1VSP}"
+	switch(mode) {
+    case 1:
+    	MxSw = [M1Sw1, M1Sw2, M1Sw3, M1Sw4, M1Sw5]; MxMode = M1Mode; MxTemp = M1Temp; MxVSP = M1VSP; break
+    case 2:
+    	MxSw = [M2Sw1, M2Sw2, M2Sw3, M2Sw4, M2Sw5]; MxMode = M2Mode; MxTemp = M2Temp; MxVSP = M2VSP; break
+    case 3:
+    	MxSw = [M3Sw1, M3Sw2, M3Sw3, M3Sw4, M3Sw5]; MxMode = M3Mode; MxTemp = M3Temp; MxVSP = M3VSP; break
+    case 4:
+    	MxSw = [M4Sw1, M4Sw2, M4Sw3, M4Sw4, M4Sw5]; MxMode = M4Mode; MxTemp = M4Temp; MxVSP = M4VSP; break
+    }
+	log.debug "+++++ setMode ${mode} MxSw=${MxSw} MxMode=${MxMode} MxTemp=${MxTemp} MxVSP=${MxVSP}"
+
+    if (MxMode == "1") {
+        cmds.addAll(setPoolModeInternal())
+    } else if (MxMode == "2") {
+        cmds.addAll(setPoolModeInternal())
+        cmds.addAll(setPoolSetpointInternal(MxTemp.toDouble()))
+    } else if (MxMode == "3") {
+        cmds.addAll(setSpaModeInternal())
+    } else if (MxMode == "4") {
+        cmds.addAll(setSpaModeInternal())
+        cmds.addAll(setSpaSetpointInternal(MxTemp.toDouble()))
+    }
+	MxSw.eachWithIndex {action, idx ->
+    	if (action == "1") {
+        	cmds.addAll(onMulti(idx+1))
+        } else if (action == "2") {
+        	cmds.addAll(offMulti(idx+1))
+        }
+    }
+    if (VSP_ENABLED && MxVSP != "5") {
+    	cmds.addAll(setVSPSpeedAndGet(MxVSP.toInteger()))
+    }
+//log.trace "setMode: cmds(before)=${cmds}"
+	cmds
 }
 
 def on() {
@@ -1075,41 +1387,55 @@ def off() {
 }
 
 //switch instance
-def onMulti(value) {
+private List onMulti(value) {
 	log.debug "+++++ onMulti($value)"
-	delayBetweenLog([
+	def cmds =[
 		zwave.multiInstanceV1.multiInstanceCmdEncap(instance: value, commandClass:37, command:1, parameter:[255]),
 		zwave.multiInstanceV1.multiInstanceCmdEncap(instance: value, commandClass:37, command:2)
-	])
+	]
 }
 
-def offMulti(value) {
+private List offMulti(value) {
 	log.debug "+++++ offMulti($value)"
-	delayBetweenLog([
+	def cmds =[
 		zwave.multiInstanceV1.multiInstanceCmdEncap(instance: value, commandClass:37, command:1, parameter:[0]),
 		zwave.multiInstanceV1.multiInstanceCmdEncap(instance: value, commandClass:37, command:2)
-	])
+	]
 }
 
 // Called by switch presses on the circuit buttons.
-def on1()  { onMulti(1) }
-def on2()  { onMulti(2) }
-def on3()  { onMulti(3) }
-def on4()  { onMulti(4) }
-def on5()  { onMulti(5) }
-def off1() { offMulti(1) }
-def off2() { offMulti(2) }
-def off3() { offMulti(3) }
-def off4() { offMulti(4) }
-def off5() { offMulti(5) }
+def List on1()  { delayBetweenLog(onMulti(1)) }
+def List on2()  { delayBetweenLog(onMulti(2)) }
+def List on3()  { delayBetweenLog(onMulti(3)) }
+def List on4()  { delayBetweenLog(onMulti(4)) }
+def List on5()  { delayBetweenLog(onMulti(5)) }
+def List off1() { delayBetweenLog(offMulti(1)) }
+def List off2() { delayBetweenLog(offMulti(2)) }
+def List off3() { delayBetweenLog(offMulti(3)) }
+def List off4() { delayBetweenLog(offMulti(4)) }
+def List off5() { delayBetweenLog(offMulti(5)) }
 
+// Called by slider control.
+def List setVSPSpeed(sp) { delayBetweenLog(setVSPSpeedAndGet(sp)) }
 // Called by switch presses on the VSP buttons.
-def setVSPSpeed0() { setVSPSpeed(0) }
-def setVSPSpeed1() { setVSPSpeed(1) }
-def setVSPSpeed2() { setVSPSpeed(2) }
-def setVSPSpeed3() { setVSPSpeed(3) }
-def setVSPSpeed4() { setVSPSpeed(4) }
+def List setVSPSpeed0() { delayBetweenLog(setVSPSpeed(0)) }
+def List setVSPSpeed1() { delayBetweenLog(setVSPSpeed(1)) }
+def List setVSPSpeed2() { delayBetweenLog(setVSPSpeed(2)) }
+def List setVSPSpeed3() { delayBetweenLog(setVSPSpeed(3)) }
+def List setVSPSpeed4() { delayBetweenLog(setVSPSpeed(4)) }
+def List setMode1() { delayBetweenLog(setMode(1)) }
+def List setMode2() { delayBetweenLog(setMode(2)) }
+def List setMode3() { delayBetweenLog(setMode(3)) }
+def List setMode4() { delayBetweenLog(setMode(4)) }
 
+def List setSpaMode() {delayBetweenLog(setSpaModeInternal()) }
+def List setPoolMode() {delayBetweenLog(setPoolModeInternal()) }
+def List togglePoolSpaMode() {delayBetweenLog(togglePoolSpaModeInternal()) }
+
+def List quickSetSpa(degrees) {delayBetweenLog(setSpaSetpointInternal(degrees), 3000)}
+def List quickSetPool(degrees) {delayBetweenLog(setPoolSetpointInternal(degrees), 3000)}
+
+// Called from all commands
 def delayBetweenLog(parm, dly=DELAY) {
 	def lst = parm
 	def cmds =[]
@@ -1120,11 +1446,13 @@ def delayBetweenLog(parm, dly=DELAY) {
     	lst = [parm]
     }
     lst.each {l ->
-        if (l instanceof physicalgraph.device.HubAction) {log.trace "instanceof physicalgraph.device.HubAction"}
+//log.trace "l -> ${l}"
+		if (l instanceof physicalgraph.device.HubAction) {log.trace "instanceof physicalgraph.device.HubAction"}
 //        if (l instanceof physicalgraph.zwave.commands.associationv2.AssociationGroupingsGet) {log.trace "$l instanceof physicalgraph.zwave.commands.associationv2.AssociationGroupingsGet"}
 		//if (l instanceof physicalgraph.HubAction) {log.trace "delay instanceof physicalgraph.zwave.commands.associationv2.AssociationGroupingsGet"}
-        if (l instanceof String) {
+        if (l instanceof String || l instanceof GString) {
             cmds << l
+            devStr = devStr.concat(", ${l}")
 //            log.trace "## String: $l"
         } else if (l instanceof List) {
             cmds << l
@@ -1137,8 +1465,17 @@ def delayBetweenLog(parm, dly=DELAY) {
         } else {
             def fmt = l.format()
             if (cmds) {
-                cmds << "delay $dly"
-                devStr = devStr.concat(", delay $dly")
+				def c = cmds.last()			//check if there is already a delay prior to this
+//log.trace "cmds=${cmds} c=${c}"
+//	            if (c instanceof String) { log.trace "c is String take(6)=${c.take(6)}" }
+//	            if (c instanceof GString) { log.trace "c is GString take(6)=${c.take(6)}" }
+//	            if ((c instanceof String || c instanceof GString) && c.take(6) != "delay ") { log.trace "not = delay" }
+//	            if ((c instanceof String || c instanceof GString) && c.take(6) == "delay ") { log.trace "= delay" }
+
+	            if (!(c instanceof String || c instanceof GString) || c.take(6) != "delay ") {
+	                cmds << "delay $dly"
+    	            devStr = devStr.concat(", delay $dly")
+                }
             }
             devStr = devStr.concat("\n<<<<< Dev cmd: $l  --> $fmt")
             cmds << fmt
@@ -1159,6 +1496,7 @@ def delayBetweenLog(parm, dly=DELAY) {
     }
 }
 
+// Only called from parse().
 def delayResponseLog(parm, dly=DELAY) {
 	def lst = parm
 	def cmds =[]
@@ -1185,8 +1523,11 @@ def delayResponseLog(parm, dly=DELAY) {
         } else {
             def fmt = response(l)
             if (cmds) {
-                cmds << "delay $dly"
-                devStr = devStr.concat(", delay $dly")
+            	c = cmds.last()			//check if there is already a delay priot to this
+	            if (c.take(6) != "delay ") {
+                    cmds << "delay $dly"
+                    devStr = devStr.concat(", delay $dly")
+                }
             }
             devStr = devStr.concat("\n<<<<< Dev resp: $l  --> $fmt")
             cmds << fmt
