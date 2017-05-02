@@ -59,6 +59,7 @@ metadata {
 
         command "quickSetPool"
         command "quickSetSpa"
+		command "quickGetWaterTemp"
 		command "setPoolMode"
 		command "setSpaMode"
 		command "togglePoolSpaMode"
@@ -328,8 +329,8 @@ metadata {
 			state "turningOff", label:'Turning off', action: "spa",         icon: "st.Health & Wellness.health2", backgroundColor: "#ffffff", nextState: "turningOn"
 			state "disabled",   label:'',            icon: "st.Health & Wellness.health2", backgroundColor: "#bc2323"  //"#ffffff"
 		}
-		valueTile("temperatureTile", "device.temperature", width: 2, height: 2, inactiveLabel: true) {
-			state "temperature", label:'${currentValue}°',
+		valueTile("temperatureTile", "device.temperature", width: 2, height: 2, inactiveLabel: true, decoration: "flat" ) {
+			state "temperature", label:'${currentValue}°', action: "quickGetWaterTemp",
 					backgroundColors:[
 						[value: 32, color: "#153591"],
 					    [value: 54, color: "#1e9cbb"],
@@ -502,11 +503,12 @@ metadata {
 //	2.02	04/26/2017	KeithR26	Fix Thermostat set for v3.4 firmware (force scale = 0)
 //  								Prototype Pool Light Color Control
 //									Implement simple "Macros"
+//	2.03	05/01/2017	KeithR26	Refresh water temp when UI temp is tapped
 
 // Constants for PE653 configuration parameter locations
 def getDELAY () {ZWdelay}								// How long to delay between commands to device (configured)
 def getMIN_DELAY () {"800"}								// Minimum delay between commands to device (configured)
-def getVERSION () {"Ver 2.02"}							// Keep track of handler version
+def getVERSION () {"Ver 2.03"}							// Keep track of handler version
 def getPOOL_SPA_SCHED_PARAM () { 21 }					// Pool/Spa mode Schedule #3 - 0x15
 def getVSP_SCHED_NO (int spd) { (35 + (spd * 3)) }		// VSP Speed 1 Schedule #3 - 0x26
 def getVSP_SPEED (int sched) { ((sched - 35) / 3) }		// Convert from sched to speed
@@ -600,6 +602,12 @@ private List setSpaSetpointInternal(Double degrees) {
 	cmds << zwave.thermostatSetpointV1.thermostatSetpointSet(setpointType: 7, scale: deviceScale, precision: p,  scaledValue: convertedDegrees)
 	cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 7)
 //    cmds
+}
+
+// Ask the controller for the water temperature
+private List getWaterTemp() {
+    log.debug "getWaterTemp()"
+    [zwave.sensorMultilevelV1.sensorMultilevelGet()]
 }
 
 //Reports
@@ -1051,7 +1059,7 @@ def enableEpEvents(enabledEndpoints) {
 def List poll() {
 	log.debug "+++++ poll()"
 //	refreshLight()
-	[zwave.sensorMultilevelV1.sensorMultilevelGet()]
+	getWaterTemp()
 }
 
 def List updated() {
@@ -1078,10 +1086,6 @@ private initUILabels() {
 def List refresh() {
 	log.debug "+++++ refresh()  ${state.VersionInfo}"
     def cmds = []
-	cmds << zwave.versionV1.versionGet()
-	cmds << zwave.manufacturerSpecificV1.manufacturerSpecificGet()
-//	cmds << zwave.associationV2.associationGroupingsGet()
-//	cmds << zwave.multiInstanceV1.multiInstanceGet(commandClass:37)
  	if (debugLevel > "1") {
     	compareConfig()
         state.ccVersions = [:]
@@ -1097,14 +1101,18 @@ def List refresh() {
         cmds << zwave.configurationV2.configurationGet(parameterNumber: 3)
         cmds << zwave.configurationV2.configurationGet(parameterNumber: 19)
 	}
+	cmds << zwave.versionV1.versionGet()
+	cmds << zwave.manufacturerSpecificV1.manufacturerSpecificGet()
+//	cmds << zwave.associationV2.associationGroupingsGet()
+//	cmds << zwave.multiInstanceV1.multiInstanceGet(commandClass:37)
 	delayBetweenLog(cmds)
 }
 
 // Used by the refresh() command and also by poll()
 private List refreshLight() {
     def cmds = []
-	cmds << zwave.sensorMultilevelV1.sensorMultilevelGet()
-    cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 1)
+	cmds.addAll(getWaterTemp())
+	cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 1)
     cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 7)
     cmds.addAll(getPoolSpaMode())
     cmds.addAll(getVSPSpeed())
@@ -1362,6 +1370,7 @@ def setMode(int mode) {
     if (VSP_ENABLED && MxVSP != "5") {
     	cmds.addAll(setVSPSpeedAndGet(MxVSP.toInteger()))
     }
+	cmds.addAll(getWaterTemp())
 //log.trace "setMode: cmds(before)=${cmds}"
 	cmds
 }
@@ -1434,6 +1443,7 @@ def List togglePoolSpaMode() {delayBetweenLog(togglePoolSpaModeInternal()) }
 
 def List quickSetSpa(degrees) {delayBetweenLog(setSpaSetpointInternal(degrees), 3000)}
 def List quickSetPool(degrees) {delayBetweenLog(setPoolSetpointInternal(degrees), 3000)}
+def List quickGetWaterTemp()  {delayBetweenLog(getWaterTemp()) }
 
 // Called from all commands
 def delayBetweenLog(parm, dly=DELAY) {
