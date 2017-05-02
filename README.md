@@ -10,6 +10,10 @@ Current Author: @KeithR26
 Original Author: @bigpunk6
 Full credit goes to bigpunk6, without whom this derivation never would have come to light.
 
+Release Notes, Version 2.03  05/01/2017:
+
+1. You can now quickly and easily refresh the water temperature display by tapping the temperature display. Unlike the "refresh" botton, which issues about a dozen commands and takes some time, tapping the temperature only sends the requst to refresh the temperature display, therefore it is much faster. The temperature is also refreshed whenever you use any of the four macro buttons. Still no luck with the poll(). 
+
 Release Notes, Version 2.02  04/26/2017:
 
 1. This release Fixes a nasty bug and adds two new features. Many have experienced the issue with using this DTH on version 3.4 of the Intermatic firmware and found that the handler is unable to change the temperatures of either pool or spa thermostat. The code used to work on prior versions of firmware, but Intermatci introduced some change in v3.4 where it rejects the request sent by the prior versions of this code. By using a Z-Wave sniffer I was able to identify how the PE953(remote) sent its request and adapt to that format. It had to do the "scale" (Celcius vs Farenheit). It was a simple change once I saw what their remote was sending, but literally took months to get a sniffer operational.
