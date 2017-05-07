@@ -17,7 +17,24 @@
  *
  *  Install my device type then use the Multi-Channel Controll App by SmartThings from the Marketplace under the More section.
  *
- */
+ *	Version History
+ *	Ver		Date		Author		Changes
+ *	1.00	06/15/2016	bigpunk6	Latest version from the original author
+ *	2.00	07/14/2016	KeithR26	Updates to make this work with Intermatic firmware v3.4
+ *									Added Pool/Spa mode and initial VSP support
+ *	2.01	08/10/2016	KeithR26	Major UI redesign
+ *									Added 4 switches to set VSP speeds and off
+ *									Added 4 "Multi-channel" endpoints for ST VSP control
+ *									Added configurable Z-Wave delay
+ *									Added PE653 configuration diagnostics in Debug level = High
+ *									Added Version Info in IDE and logs
+ *									Allow changing icon
+ *	2.02	04/26/2017	KeithR26	Fix Thermostat set for v3.4 firmware (force scale = 0)
+ *  								Prototype Pool Light Color Control
+ *									Implement simple "Macros"
+ *	2.03	05/01/2017	KeithR26	Refresh water temp when UI temp is tapped
+ *	2.04	05/07/2017	KeithR26	Allow negative temperature offsets. Limit offets to +/- 5 (max supported by PE653)
+*/
 metadata {
 	definition (name: "Intermatic PE653 Pool Control System", author: "KeithR26", namespace:  "KeithR26") {
         capability "Actuator"
@@ -87,6 +104,7 @@ metadata {
         command "setMode4"
         command "setLightColor"
         command "setColor"
+        command "updated"
 //		command "epCmd"
 //		command "enableEpEvents"
         
@@ -132,21 +150,15 @@ metadata {
                      "13":"13 minute",
                      "14":"14 minute",
                      "15":"15 minute"]
-        input "tempOffsetwater", "number", title: "Water temperature offset", defaultValue: 0, required: true
+		input "tempOffsetwater", "number", title: "Water temperature offset", range: "-5..5", defaultValue: 0, required: true
         input "tempOffsetair", "number",
-            title: "Air temperature offset - Sets the Offset of the air temerature for the add-on Thermometer in degrees Fahrenheit -20F to +20F", defaultValue: 0, required: true
+            title: "Air temperature offset - Sets the Offset of the air temerature for the add-on Thermometer in degrees Fahrenheit -5F to +5F", range: "-5..5", defaultValue: 0, required: true
         input "debugLevel", "enum", title: "Debug Level", multiple: "true",
         	options:[0:"Off",
             		 1:"Low",
                      2:"High"], defaultvalue: 0
         input "ZWdelay", "number",
             title: "Delay between Z-Wave commands sent (milliseconds). Suggest 1000.", defaultValue: 1000, required: true
-//        input "M1On", "enum", title: "M1: Turn these circuits On:", multiple: "true",
-//        	options:[1:"Sw1",
-//            		 2:"Sw2",
-//            		 3:"Sw3",
-//            		 4:"Sw4",
-//                   5:"Sw5"], defaultValue: 0
 //Mode 1
         input "M1Label", "text", title: "M1: Display Name:", defaultValue: ""
         input "M1Sw1", "enum", title: "M1: Circuit 1 action:", defaultValue: 0,
@@ -488,27 +500,10 @@ metadata {
 	}
 }
 
-//	Version History
-//	Ver		Date		Author		Changes
-//	1.00	06/15/2016	bigpunk6	Latest version from the original author
-//	2.00	07/14/2016	KeithR26	Updates to make this work with Intermatic firmware v3.4
-//									Added Pool/Spa mode and initial VSP support
-//	2.01	08/10/2016	KeithR26	Major UI redesign
-//									Added 4 switches to set VSP speeds and off
-//									Added 4 "Multi-channel" endpoints for ST VSP control
-//									Added configurable Z-Wave delay
-//									Added PE653 configuration diagnostics in Debug level = High
-//									Added Version Info in IDE and logs
-//									Allow changing icon
-//	2.02	04/26/2017	KeithR26	Fix Thermostat set for v3.4 firmware (force scale = 0)
-//  								Prototype Pool Light Color Control
-//									Implement simple "Macros"
-//	2.03	05/01/2017	KeithR26	Refresh water temp when UI temp is tapped
-
 // Constants for PE653 configuration parameter locations
 def getDELAY () {ZWdelay}								// How long to delay between commands to device (configured)
 def getMIN_DELAY () {"800"}								// Minimum delay between commands to device (configured)
-def getVERSION () {"Ver 2.03"}							// Keep track of handler version
+def getVERSION () {"Ver 2.04"}							// Keep track of handler version
 def getPOOL_SPA_SCHED_PARAM () { 21 }					// Pool/Spa mode Schedule #3 - 0x15
 def getVSP_SCHED_NO (int spd) { (35 + (spd * 3)) }		// VSP Speed 1 Schedule #3 - 0x26
 def getVSP_SPEED (int sched) { ((sched - 35) / 3) }		// Convert from sched to speed
@@ -1062,20 +1057,6 @@ def List poll() {
 	getWaterTemp()
 }
 
-def List updated() {
-	log.debug "+++++ updated()  ${state.VersionInfo}"
-	initUILabels()
-	def lightCircuits = []
-	if (C1ColorEnabled == "1") {lightCircuits << 1}
-	if (C2ColorEnabled == "1") {lightCircuits << 2}
-	if (C3ColorEnabled == "1") {lightCircuits << 3}
-	if (C4ColorEnabled == "1") {lightCircuits << 4}
-	if (C5ColorEnabled == "1") {lightCircuits << 5}
-    state.lightCircuitsList = lightCircuits
-log.trace("lightCircuits=${lightCircuits}  C3ColorEnabled=${C3ColorEnabled}")    
-	configure()
-}
-
 private initUILabels() {
 	sendEvent(name: "M1Name", value: (M1Label ? "${M1Label}" : ""), isStateChange: true, displayed: true, descriptionText: "init M1 Label to ${M1Label}")
 	sendEvent(name: "M2Name", value: (M2Label ? "${M2Label}" : ""), isStateChange: true, displayed: true, descriptionText: "init M2 Label to ${M2Label}")
@@ -1128,18 +1109,46 @@ private List refreshLight() {
     cmds
 }
 
+def List updated() {
+	log.debug "+++++ updated()  ${state.VersionInfo}"
+    def cmds = []
+	initUILabels()
+	def lightCircuits = []
+	if (C1ColorEnabled == "1") {lightCircuits << 1}
+	if (C2ColorEnabled == "1") {lightCircuits << 2}
+	if (C3ColorEnabled == "1") {lightCircuits << 3}
+	if (C4ColorEnabled == "1") {lightCircuits << 4}
+	if (C5ColorEnabled == "1") {lightCircuits << 5}
+    state.lightCircuitsList = lightCircuits
+//log.trace("lightCircuits=${lightCircuits}  C3ColorEnabled=${C3ColorEnabled}")    
+	delayBetweenLog(internalConfigure())
+}
+
 def List configure() {
 	log.debug "+++++ configure()  ${state.VersionInfo}"
+//    def cmds = []
+	initUILabels()
+	delayBetweenLog(internalConfigure())
+}
+
+private List internalConfigure() {
+//	log.debug "+++++ internalConfigure()  ${state.VersionInfo}"
     def opMode2 = operationMode2.toInteger() & 0x03
+    def int tempWater = tempOffsetwater.toInteger()
+    def int tempAir   = tempOffsetair.toInteger()
 	def cmds = []
+	if (tempWater < 0) tempWater = 256 + tempWater
+	if (tempAir < 0)   tempAir   = 256 + tempAir
+
+    cmds << zwave.configurationV2.configurationSet(parameterNumber: 1,  size: 2, configurationValue: [operationMode1.toInteger(), opMode2.toInteger()])
+    cmds << zwave.configurationV2.configurationSet(parameterNumber: 3,  size: 4, configurationValue: [tempWater, tempAir, 0, 0])
+    cmds << zwave.configurationV2.configurationSet(parameterNumber: 19, size: 1, configurationValue: [poolSpa1.toInteger()])
+    cmds << zwave.configurationV2.configurationSet(parameterNumber: 2,  size: 1, configurationValue: [fireman.toInteger()])
+
 //    cmds << zwave.associationV2.associationGroupingsGet()
 //    cmds << zwave.associationV2.associationSet(groupingIdentifier:1, nodeId:zwaveHubNodeId)
 //    cmds << zwave.associationV2.associationGet(groupingIdentifier:1)
 
-    cmds << zwave.configurationV2.configurationSet(parameterNumber: 1,  size: 2, configurationValue: [operationMode1.toInteger(), opMode2.toInteger()])
-    cmds << zwave.configurationV2.configurationSet(parameterNumber: 3,  size: 4, configurationValue: [tempOffsetwater.toInteger(), tempOffsetair.toInteger(), 0, 0])
-    cmds << zwave.configurationV2.configurationSet(parameterNumber: 19, size: 1, configurationValue: [poolSpa1.toInteger()])
-    cmds << zwave.configurationV2.configurationSet(parameterNumber: 2,  size: 1, configurationValue: [fireman.toInteger()])
 	if (debugLevel <= "1") {
 		cmds << zwave.configurationV2.configurationGet(parameterNumber: 1)
         cmds << zwave.configurationV2.configurationGet(parameterNumber: 2)
@@ -1164,8 +1173,7 @@ log.trace "POOL_SPA_COMBO:${POOL_SPA_COMBO}"
     } else {
     	cmds.addAll(getPoolSpaMode())
     }
-    
-	delayBetweenLog(cmds)
+	cmds    
 }
 
 // Query the four VSP scheduled to determine which speed is enabled
