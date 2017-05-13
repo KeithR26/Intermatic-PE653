@@ -354,8 +354,92 @@ metadata {
 				    	[value: 110, color: "#bc2323"]
 					]
 		}
-        
-        controlTile("poolSliderControl", "device.poolSetpoint", "slider", width: 4, height: 1, inactiveLabel: false, range:"(40..104)") {
+		valueTile("temperatureTile2", "device.temperature", width: 2, height: 2, inactiveLabel: true, decoration: "flat" ) {
+			state "temperature", label:'${currentValue}°',
+					backgroundColors:[
+						[value: 32, color: "#153591"],
+					    [value: 54, color: "#1e9cbb"],
+				    	[value: 64, color: "#90d2a7"],
+				    	[value: 74, color: "#44b621"],
+				    	[value: 90, color: "#f1d801"],
+				    	[value: 98, color: "#d04e00"],
+				    	[value: 110, color: "#bc2323"]
+					]
+		}
+		valueTile("temperatureTile2", "device.temperature", width: 2, height: 2, inactiveLabel: false, decoration: "flat" ) {
+			state "temperature", label:'${currentValue}°', action: "quickGetWaterTemp",
+					backgroundColors:[
+						[value: 32, color: "#153591"],
+					    [value: 54, color: "#1e9cbb"],
+				    	[value: 64, color: "#90d2a7"],
+				    	[value: 74, color: "#44b621"],
+				    	[value: 90, color: "#f1d801"],
+				    	[value: 98, color: "#d04e00"],
+				    	[value: 110, color: "#bc2323"]
+					]
+		}
+		valueTile("temperatureTile4", "device.temperature", width: 2, height: 2, inactiveLabel: false, decoration: "flat" ) {
+			state "temperature", label:'${currentValue}°',
+					backgroundColors:[
+						[value: 32, color: "#153591"],
+					    [value: 54, color: "#1e9cbb"],
+				    	[value: 64, color: "#90d2a7"],
+				    	[value: 74, color: "#44b621"],
+				    	[value: 90, color: "#f1d801"],
+				    	[value: 98, color: "#d04e00"],
+				    	[value: 110, color: "#bc2323"]
+					]
+		}
+		valueTile("temperatureTile5", "device.temperature", width: 2, height: 2, inactiveLabel: true ) {
+			state "temperature", label:'${currentValue}°', action: "quickGetWaterTemp",
+					backgroundColors:[
+						[value: 32, color: "#153591"],
+					    [value: 54, color: "#1e9cbb"],
+				    	[value: 64, color: "#90d2a7"],
+				    	[value: 74, color: "#44b621"],
+				    	[value: 90, color: "#f1d801"],
+				    	[value: 98, color: "#d04e00"],
+				    	[value: 110, color: "#bc2323"]
+					]
+		}
+		valueTile("temperatureTile6", "device.temperature", width: 2, height: 2, inactiveLabel: true) {
+			state "temperature", label:'${currentValue}°',
+					backgroundColors:[
+						[value: 32, color: "#153591"],
+					    [value: 54, color: "#1e9cbb"],
+				    	[value: 64, color: "#90d2a7"],
+				    	[value: 74, color: "#44b621"],
+				    	[value: 90, color: "#f1d801"],
+				    	[value: 98, color: "#d04e00"],
+				    	[value: 110, color: "#bc2323"]
+					]
+		}
+		valueTile("temperatureTile7", "device.temperature", width: 2, height: 2, inactiveLabel: false ) {
+			state "temperature", label:'${currentValue}°', action: "quickGetWaterTemp",
+					backgroundColors:[
+						[value: 32, color: "#153591"],
+					    [value: 54, color: "#1e9cbb"],
+				    	[value: 64, color: "#90d2a7"],
+				    	[value: 74, color: "#44b621"],
+				    	[value: 90, color: "#f1d801"],
+				    	[value: 98, color: "#d04e00"],
+				    	[value: 110, color: "#bc2323"]
+					]
+		}
+		valueTile("temperatureTile8", "device.temperature", width: 2, height: 2, inactiveLabel: false) {
+			state "temperature", label:'${currentValue}°',
+					backgroundColors:[
+						[value: 32, color: "#153591"],
+					    [value: 54, color: "#1e9cbb"],
+				    	[value: 64, color: "#90d2a7"],
+				    	[value: 74, color: "#44b621"],
+				    	[value: 90, color: "#f1d801"],
+				    	[value: 98, color: "#d04e00"],
+				    	[value: 110, color: "#bc2323"]
+					]
+		}
+
+		controlTile("poolSliderControl", "device.poolSetpoint", "slider", width: 4, height: 1, inactiveLabel: false, range:"(40..104)") {
 			state "PoolSetpoint", action:"quickSetPool", backgroundColor:"#d04e00"
 		}
 		valueTile("poolSetpoint", "device.poolSetpoint", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
@@ -492,6 +576,8 @@ metadata {
             "switch1","switch2","switch3","switch4","switch5",
             "poolSpaMode",
         	"temperatureTile",
+            "temperatureTile2","temperatureTile3","temperatureTile4","temperatureTile5",
+            "temperatureTile6","temperatureTile7","temperatureTile8",
             "swVSP1","swVSP2","swVSP3","swVSP4",
             "swM1", "M1Name", "swM2", "M2Name", "swM3", "M3Name", "swM4", "M4Name",
 			"poolSliderControl", "poolSetpoint", "spaSliderControl", "spaSetpoint",
