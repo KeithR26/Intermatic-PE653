@@ -34,6 +34,8 @@
  *									Implement simple "Macros"
  *	2.03	05/01/2017	KeithR26	Refresh water temp when UI temp is tapped
  *	2.04	05/07/2017	KeithR26	Allow negative temperature offsets. Limit offets to +/- 5 (max supported by PE653)
+ *  2.05	05/13/2017  KeithR26	Debug version for Android. Never committed to master
+ *  2.06    05/13/2017  KeithR26	Update to fix Temperature display on Android
 */
 metadata {
 	definition (name: "Intermatic PE653 Pool Control System", author: "KeithR26", namespace:  "KeithR26") {
@@ -341,7 +343,7 @@ metadata {
 			state "turningOff", label:'Turning off', action: "spa",         icon: "st.Health & Wellness.health2", backgroundColor: "#ffffff", nextState: "turningOn"
 			state "disabled",   label:'',            icon: "st.Health & Wellness.health2", backgroundColor: "#bc2323"  //"#ffffff"
 		}
-		valueTile("temperatureTile", "device.temperature", width: 2, height: 2, inactiveLabel: true, decoration: "flat" ) {
+		valueTile("temperatureTile", "device.temperature", width: 2, height: 2, inactiveLabel: true ) {
 			state "temperature", label:'${currentValue}°', action: "quickGetWaterTemp",
 					backgroundColors:[
 						[value: 32, color: "#153591"],
@@ -503,7 +505,7 @@ metadata {
 // Constants for PE653 configuration parameter locations
 def getDELAY () {ZWdelay}								// How long to delay between commands to device (configured)
 def getMIN_DELAY () {"800"}								// Minimum delay between commands to device (configured)
-def getVERSION () {"Ver 2.04"}							// Keep track of handler version
+def getVERSION () {"Ver 2.06"}							// Keep track of handler version
 def getPOOL_SPA_SCHED_PARAM () { 21 }					// Pool/Spa mode Schedule #3 - 0x15
 def getVSP_SCHED_NO (int spd) { (35 + (spd * 3)) }		// VSP Speed 1 Schedule #3 - 0x26
 def getVSP_SPEED (int sched) { ((sched - 35) / 3) }		// Convert from sched to speed
@@ -1065,7 +1067,7 @@ private initUILabels() {
 }
 
 def List refresh() {
-	log.debug "+++++ refresh()  ${state.VersionInfo}"
+	log.debug "+++++ refresh()  DTH:${VERSION}  state.Versioninfo=${state.VersionInfo}"
     def cmds = []
  	if (debugLevel > "1") {
     	compareConfig()
@@ -1110,7 +1112,7 @@ private List refreshLight() {
 }
 
 def List updated() {
-	log.debug "+++++ updated()  ${state.VersionInfo}"
+	log.debug "+++++ updated()    DTH:${VERSION}  state.Versioninfo=${state.VersionInfo}"
     def cmds = []
 	initUILabels()
 	def lightCircuits = []
@@ -1125,14 +1127,13 @@ def List updated() {
 }
 
 def List configure() {
-	log.debug "+++++ configure()  ${state.VersionInfo}"
+	log.debug "+++++ configure()    DTH:${VERSION}  state.Versioninfo=${state.VersionInfo}"
 //    def cmds = []
 	initUILabels()
 	delayBetweenLog(internalConfigure())
 }
 
 private List internalConfigure() {
-//	log.debug "+++++ internalConfigure()  ${state.VersionInfo}"
     def opMode2 = operationMode2.toInteger() & 0x03
     def int tempWater = tempOffsetwater.toInteger()
     def int tempAir   = tempOffsetair.toInteger()
