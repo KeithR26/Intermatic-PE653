@@ -2,7 +2,7 @@
  *  Intermatic PE653 Pool Control System
  *
  *  Original Copyright 2014 bigpunk6
- *  Updated 2017 KeithR26
+ *  Updated 2018 KeithR26
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -13,9 +13,12 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Don't use Cooper Lee's code (vTile_ms, ms_w_vts) he was working on a different implementation than me.
+ *  This DTH is now a "Composite Device Type Handler" which supports multiple "Child" devices that appear in
+ *	the "Things" list and can be used by SmartApps to control the 5 switches, Pool/Spa mode and 4 VSP speeds.
+ *	This requires a second DTH be installed: erocm123 / Switch Child Device
  *
- *  Install my device type then use the Multi-Channel Controll App by SmartThings from the Marketplace under the More section.
+ *  Don't use SamrtThings Multi-channel (deprecated) or Cooper Lee's code (vTile_ms, ms_w_vts). These are incompatible
+ *  with the Composite DTH architecture.
  *
  *	Version History
  *	Ver		Date		Author		Changes
@@ -36,6 +39,7 @@
  *	2.04	05/07/2017	KeithR26	Allow negative temperature offsets. Limit offets to +/- 5 (max supported by PE653)
  *  2.05	05/13/2017  KeithR26	Debug version for Android. Never committed to master
  *  2.06    05/13/2017  KeithR26	Update to fix Temperature display on Android
+ *  3.00	05/06/2018	KeithR26	Change to "Composite" DTH since ST deprecated the Multi-channel SmartApp
 */
 metadata {
 	definition (name: "Intermatic PE653 Pool Control System", author: "KeithR26", namespace:  "KeithR26") {
@@ -65,6 +69,7 @@ metadata {
 		attribute "ManufacturerInfo", "string"
 		attribute "groups", "string"
 		attribute "debugLevel", "string"
+//        attribute "children", "List"
 
 		attribute "switch1", "string"
 		attribute "switch2", "string"
@@ -76,14 +81,15 @@ metadata {
 		attribute "swVSP3", "string"
 		attribute "swVSP4", "string"
 
+        command "poll"
         command "quickSetPool"
         command "quickSetSpa"
 		command "quickGetWaterTemp"
 		command "setPoolMode"
 		command "setSpaMode"
 		command "togglePoolSpaMode"
-		command "onMulti"
-		command "offMulti"
+		command "childOn"
+		command "childOff"
         command "on1"
 		command "off1"
         command "on2"
@@ -106,9 +112,8 @@ metadata {
         command "setMode4"
         command "setLightColor"
         command "setColor"
+        command "setClock"
         command "updated"
-//		command "epCmd"
-//		command "enableEpEvents"
         
 		fingerprint deviceId: "0x1001", inClusters: "0x91,0x73,0x72,0x86,0x81,0x60,0x70,0x85,0x25,0x27,0x43,0x31", outClusters: "0x82"
 	}
@@ -152,45 +157,45 @@ metadata {
                      "13":"13 minute",
                      "14":"14 minute",
                      "15":"15 minute"]
-		input "tempOffsetwater", "number", title: "Water temperature offset", range: "-5..5", defaultValue: 0, required: true
+		input "tempOffsetwater", "number", title: "Water temperature offset", range: "-5..5", required: true
         input "tempOffsetair", "number",
-            title: "Air temperature offset - Sets the Offset of the air temerature for the add-on Thermometer in degrees Fahrenheit -5F to +5F", range: "-5..5", defaultValue: 0, required: true
+            title: "Air temperature offset - Sets the Offset of the air temerature for the add-on Thermometer in degrees Fahrenheit -5F to +5F", range: "-5..5", required: true
         input "debugLevel", "enum", title: "Debug Level", multiple: "true",
         	options:[0:"Off",
             		 1:"Low",
-                     2:"High"], defaultvalue: 0
+                     2:"High"]
         input "ZWdelay", "number",
-            title: "Delay between Z-Wave commands sent (milliseconds). Suggest 1000.", defaultValue: 1000, required: true
+            title: "Delay between Z-Wave commands sent (milliseconds). Suggest 1000.", required: true
 //Mode 1
-        input "M1Label", "text", title: "M1: Display Name:", defaultValue: ""
-        input "M1Sw1", "enum", title: "M1: Circuit 1 action:", defaultValue: 0,
+        input "M1Label", "text", title: "M1: Display Name:"
+        input "M1Sw1", "enum", title: "M1: Circuit 1 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M1Sw2", "enum", title: "M1: Circuit 2 action:", defaultValue: 0,
+        input "M1Sw2", "enum", title: "M1: Circuit 2 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M1Sw3", "enum", title: "M1: Circuit 3 action:", defaultValue: 0,
+        input "M1Sw3", "enum", title: "M1: Circuit 3 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M1Sw4", "enum", title: "M1: Circuit 4 action:", defaultValue: 0,
+        input "M1Sw4", "enum", title: "M1: Circuit 4 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M1Sw5", "enum", title: "M1: Circuit 5 action:", defaultValue: 0,
+        input "M1Sw5", "enum", title: "M1: Circuit 5 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M1Mode", "enum", title: "M1: Mode to change to:", defaultValue: 0,
+        input "M1Mode", "enum", title: "M1: Mode to change to:",
         	options:[0:"No change",
             		 1:"Pool",
                      2:"Pool & Set Temperature",
             		 3:"Spa",
                      4:"Spa & Set Temperature"]
-        input "M1Temp", "number", title: "M1: Set Temperature to:", range: "40..104", defaultValue: 40
-        input "M1VSP", "enum", title: "M1: Set VSP Speed to:", defaultValue: 0,
+        input "M1Temp", "number", title: "M1: Set Temperature to:", range: "40..104"
+        input "M1VSP", "enum", title: "M1: Set VSP Speed to:",
         	options:[5:"No change",
             		 1:"Speed 1",
             		 2:"Speed 2",
@@ -198,35 +203,35 @@ metadata {
                      4:"Speed 4",
                      0:"Turn off"]
 //Mode 2
-        input "M2Label", "text", title: "M2: Display Name:", defaultValue: ""
-		input "M2Sw1", "enum", title: "M2: Circuit 1 action:", defaultValue: 0,
+        input "M2Label", "text", title: "M2: Display Name:"
+		input "M2Sw1", "enum", title: "M2: Circuit 1 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M2Sw2", "enum", title: "M2: Circuit 2 action:", defaultValue: 0,
+        input "M2Sw2", "enum", title: "M2: Circuit 2 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M2Sw3", "enum", title: "M2: Circuit 3 action:", defaultValue: 0,
+        input "M2Sw3", "enum", title: "M2: Circuit 3 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M2Sw4", "enum", title: "M2: Circuit 4 action:", defaultValue: 0,
+        input "M2Sw4", "enum", title: "M2: Circuit 4 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M2Sw5", "enum", title: "M2: Circuit 5 action:", defaultValue: 0,
+        input "M2Sw5", "enum", title: "M2: Circuit 5 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M2Mode", "enum", title: "M2: Mode to change to:", defaultValue: 0,
+        input "M2Mode", "enum", title: "M2: Mode to change to:",
         	options:[0:"No change",
             		 1:"Pool",
                      2:"Pool & Set Temperature",
             		 3:"Spa",
                      4:"Spa & Set Temperature"]
-        input "M2Temp", "number", title: "M2: Set Temperature to:", range: "40..104", defaultValue: 40
-        input "M2VSP", "enum", title: "M2: Set VSP Speed to:", defaultValue: 0,
+        input "M2Temp", "number", title: "M2: Set Temperature to:", range: "40..104"
+        input "M2VSP", "enum", title: "M2: Set VSP Speed to:",
         	options:[5:"No change",
             		 1:"Speed 1",
             		 2:"Speed 2",
@@ -234,35 +239,35 @@ metadata {
                      4:"Speed 4",
                      0:"Turn off"]
 //Mode 3
-        input "M3Label", "text", title: "M3: Display Name:", defaultValue: ""
-        input "M3Sw1", "enum", title: "M3: Circuit 1 action:", defaultValue: 0,
+        input "M3Label", "text", title: "M3: Display Name:"
+        input "M3Sw1", "enum", title: "M3: Circuit 1 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M3Sw2", "enum", title: "M3: Circuit 2 action:", defaultValue: 0,
+        input "M3Sw2", "enum", title: "M3: Circuit 2 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M3Sw3", "enum", title: "M3: Circuit 3 action:", defaultValue: 0,
+        input "M3Sw3", "enum", title: "M3: Circuit 3 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M3Sw4", "enum", title: "M3: Circuit 4 action:", defaultValue: 0,
+        input "M3Sw4", "enum", title: "M3: Circuit 4 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M3Sw5", "enum", title: "M3: Circuit 5 action:", defaultValue: 0,
+        input "M3Sw5", "enum", title: "M3: Circuit 5 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M3Mode", "enum", title: "M3: Mode to change to:", defaultValue: 0,
+        input "M3Mode", "enum", title: "M3: Mode to change to:",
         	options:[0:"No change",
             		 1:"Pool",
                      2:"Pool & Set Temperature",
             		 3:"Spa",
                      4:"Spa & Set Temperature"]
-        input "M3Temp", "number", title: "M3: Set Temperature to:", range: "40..104", defaultValue: 40
-        input "M3VSP", "enum", title: "M3: Set VSP Speed to:", defaultValue: 0,
+        input "M3Temp", "number", title: "M3: Set Temperature to:", range: "40..104"
+        input "M3VSP", "enum", title: "M3: Set VSP Speed to:"
         	options:[5:"No change",
             		 1:"Speed 1",
             		 2:"Speed 2",
@@ -270,54 +275,54 @@ metadata {
                      4:"Speed 4",
                      0:"Turn off"]
 //Mode 4
-        input "M4Label", "text", title: "M4: Display Name:", defaultValue: ""
-        input "M4Sw1", "enum", title: "M4: Circuit 1 action:", defaultValue: 0,
+        input "M4Label", "text", title: "M4: Display Name:"
+        input "M4Sw1", "enum", title: "M4: Circuit 1 action:"
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M4Sw2", "enum", title: "M4: Circuit 2 action:", defaultValue: 0,
+        input "M4Sw2", "enum", title: "M4: Circuit 2 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M4Sw3", "enum", title: "M4: Circuit 3 action:", defaultValue: 0,
+        input "M4Sw3", "enum", title: "M4: Circuit 3 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M4Sw4", "enum", title: "M4: Circuit 4 action:", defaultValue: 0,
+        input "M4Sw4", "enum", title: "M4: Circuit 4 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M4Sw5", "enum", title: "M4: Circuit 5 action:", defaultValue: 0,
+        input "M4Sw5", "enum", title: "M4: Circuit 5 action:",
         	options:[0:"No Change",
             		 1:"On",
             		 2:"Off"]
-        input "M4Mode", "enum", title: "M4: Mode to change to:", defaultValue: 0,
+        input "M4Mode", "enum", title: "M4: Mode to change to:",
         	options:[0:"No change",
             		 1:"Pool",
                      2:"Pool & Set Temperature",
             		 3:"Spa",
                      4:"Spa & Set Temperature"]
-        input "M4Temp", "number", title: "M4: Set Temperature to:", range: "40..104", defaultValue: 40
-        input "M4VSP", "enum", title: "M4: Set VSP Speed to:", defaultValue: 0,
+        input "M4Temp", "number", title: "M4: Set Temperature to:", range: "40..104"
+        input "M4VSP", "enum", title: "M4: Set VSP Speed to:",
         	options:[5:"No change",
             		 1:"Speed 1",
             		 2:"Speed 2",
             		 3:"Speed 3",
                      4:"Speed 4",
                      0:"Turn off"]
-        input "C1ColorEnabled", "enum", title: "Circuit 1 Color Light Enable:", defaultValue: 0,
+        input "C1ColorEnabled", "enum", title: "Circuit 1 Color Light Enable:",
         	options:[0:"off",
             		 1:"On"]
-        input "C2ColorEnabled", "enum", title: "Circuit 2 Color Light Enable:", defaultValue: 0,
+        input "C2ColorEnabled", "enum", title: "Circuit 2 Color Light Enable:",
         	options:[0:"off",
             		 1:"On"]
-        input "C3ColorEnabled", "enum", title: "Circuit 3 Color Light Enable:", defaultValue: 0,
+        input "C3ColorEnabled", "enum", title: "Circuit 3 Color Light Enable:",
         	options:[0:"off",
             		 1:"On"]
-        input "C4ColorEnabled", "enum", title: "Circuit 4 Color Light Enable:", defaultValue: 0,
+        input "C4ColorEnabled", "enum", title: "Circuit 4 Color Light Enable:",
         	options:[0:"off",
             		 1:"On"]
-        input "C5ColorEnabled", "enum", title: "Circuit 5 Color Light Enable:", defaultValue: 0,
+        input "C5ColorEnabled", "enum", title: "Circuit 5 Color Light Enable:",
         	options:[0:"off",
             		 1:"On"]
     }
@@ -336,13 +341,25 @@ metadata {
 	// tile definitions
 	tiles(scale: 2) {
 
-		standardTile("mainTile", "device.poolSpaMode", width: 1, height: 1, canChangeIcon: true, canChangeBackground: true) {
-			state "spa",        label: "spa",        action: "setPoolMode", icon: "st.Health & Wellness.health2",  backgroundColor: "#79b821", nextState: "turningOff"
-			state "pool",       label: "pool",       action: "setSpaMode",  icon: "st.Health & Wellness.health2", backgroundColor: "#ffffff", nextState: "turningOn"
-			state "turningOn",  label:'Turning on',  action: "pool",        icon: "st.Health & Wellness.health2",  backgroundColor: "#79b821", nextState: "turningOff"
-			state "turningOff", label:'Turning off', action: "spa",         icon: "st.Health & Wellness.health2", backgroundColor: "#ffffff", nextState: "turningOn"
-			state "disabled",   label:'',            icon: "st.Health & Wellness.health2", backgroundColor: "#bc2323"  //"#ffffff"
-		}
+//		standardTile("mainTile", "device.poolSpaMode", width: 1, height: 1, canChangeIcon: true, canChangeBackground: true) {
+//			state "on",         label: "on",         action: "setPoolMode", icon: "st.Health & Wellness.health2",  backgroundColor: "#79b821", nextState: "turningOff"
+//			state "off",        label: "off",        action: "setSpaMode",  icon: "st.Health & Wellness.health2", backgroundColor: "#ffffff", nextState: "turningOn"
+//			state "turningOn",  label:'Turning on',  action: "setSpaMode",        icon: "st.Health & Wellness.health2",  backgroundColor: "#79b821", nextState: "turningOff"
+//			state "turningOff", label:'Turning off', action: "setPoolMode",         icon: "st.Health & Wellness.health2", backgroundColor: "#ffffff", nextState: "turningOn"
+//			state "disabled",   label:'',            icon: "st.Health & Wellness.health2", backgroundColor: "#bc2323"  //"#ffffff"
+//		}
+		valueTile("mainTile", "device.temperature", width: 2, height: 2, inactiveLabel: true ) {
+			state "temperature", label:'${currentValue}°', action: "quickGetWaterTemp",icon: "st.Health & Wellness.health2",
+					backgroundColors:[
+						[value: 32, color: "#153591"],
+					    [value: 54, color: "#1e9cbb"],
+				    	[value: 64, color: "#90d2a7"],
+				    	[value: 74, color: "#44b621"],
+				    	[value: 90, color: "#f1d801"],
+				    	[value: 98, color: "#d04e00"],
+				    	[value: 110, color: "#bc2323"]
+					]
+        }
 		valueTile("temperatureTile", "device.temperature", width: 2, height: 2, inactiveLabel: true ) {
 			state "temperature", label:'${currentValue}°', action: "quickGetWaterTemp",
 					backgroundColors:[
@@ -355,41 +372,59 @@ metadata {
 				    	[value: 110, color: "#bc2323"]
 					]
 		}
-        
-        controlTile("poolSliderControl", "device.poolSetpoint", "slider", width: 4, height: 1, inactiveLabel: false, range:"(40..104)") {
+		valueTile("airTempTile", "device.airTemp", width: 2, height: 1, inactiveLabel: true ) {
+			state "airTemp", label:'${currentValue}°',
+					backgroundColors:[
+						[value: 32, color: "#153591"],
+					    [value: 54, color: "#1e9cbb"],
+				    	[value: 64, color: "#90d2a7"],
+				    	[value: 74, color: "#44b621"],
+				    	[value: 90, color: "#f1d801"],
+				    	[value: 98, color: "#d04e00"],
+				    	[value: 110, color: "#bc2323"]
+					]
+		}
+		valueTile("airTempLabel", "device.airTempLabel", width: 1, height: 1, inactiveLabel: false, decoration: "flat") {
+			state "airTemp", label:'  AIR:', backgroundColor:"#ffffff"
+		}
+        controlTile("poolSliderControl", "device.poolSetpoint", "slider", width: 2, height: 1, inactiveLabel: false, range:"(40..104)") {
 			state "PoolSetpoint", action:"quickSetPool", backgroundColor:"#d04e00"
 		}
-		valueTile("poolSetpoint", "device.poolSetpoint", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
-			state "pool", label:'pool ${currentValue}°', backgroundColor:"#ffffff"
+		valueTile("poolSetpoint", "device.poolSetpoint", width: 1, height: 1, inactiveLabel: false, decoration: "flat") {
+			state "pool", label:' POOL:', backgroundColor:"#ffffff"
+//			state "pool", label:'pool ${currentValue}°', backgroundColor:"#ffffff"
 		}
-		controlTile("spaSliderControl", "device.spaSetpoint", "slider", width: 4, height: 1, inactiveLabel: false, range:"(40..104)") {
+		controlTile("spaSliderControl", "device.spaSetpoint", "slider", width: 2, height: 1, inactiveLabel: false, range:"(40..104)") {
 			state "SpaSetpoint", action:"quickSetSpa", backgroundColor: "#1e9cbb"
 		}
-		valueTile("spaSetpoint", "device.spaSetpoint", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
-			state "spa", label:'spa  ${currentValue}°', backgroundColor:"#ffffff"
+		valueTile("spaSetpoint", "device.spaSetpoint", width: 1, height: 1, inactiveLabel: false, decoration: "flat") {
+			state "spa", label:'   SPA:', backgroundColor:"#ffffff"
+//			state "spa", label:'spa  ${currentValue}°', backgroundColor:"#ffffff"
 		}
         controlTile("pumpSpeedSliderControl", "device.pumpSpeed", "slider", width: 4, height: 1, inactiveLabel: false, range:"(0..4)") {
 			state "pumpSpeed", action:"setVSPSpeed", backgroundColor:"#d04e00"
 		}
 		valueTile("pumpSpeed", "device.pumpSpeed", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
-			state "pumpSpeed", label:'speed ${currentValue}', backgroundColor:"#ffffff"
+			state "pumpSpeed", label:'Speed:', backgroundColor:"#ffffff"
+//			state "pumpSpeed", label:'speed ${currentValue}', backgroundColor:"#ffffff"
 		}
-        controlTile("lightColorSliderControl", "device.lightColor", "slider", width: 4, height: 1, inactiveLabel: false, range:"(1..14)") {
+        controlTile("lightColorSliderControl", "device.lightColor", "slider", width: 2, height: 1, inactiveLabel: false, range:"(1..14)") {
 			state "color", action:"setLightColor", backgroundColor:"#d04e00"
 		}
 //		valueTile("temperatureTile", "device.temperature", width: 2, height: 2, inactiveLabel: true) {
-		valueTile("lightColor", "device.lightColor", width: 2, height: 1, inactiveLabel: true, decoration: "flat") {
-			state "color", action:"setColor", label:'color ${currentValue}', backgroundColor:"#ffffff"
+		valueTile("lightColor", "device.lightColor", width: 1, height: 1, inactiveLabel: true, decoration: "flat") {
+			state "color", action:"setColor", label:'COLOR:', backgroundColor:"#ffffff"
+//			state "color", action:"setColor", label:'color ${currentValue}', backgroundColor:"#ffffff"
 		}
 //		standardTile("lightColor", "device.lightColor", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
 //			state "color", action:"setColor", label:'color ${currentValue}', backgroundColor:"#ffffff", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/Pool.png"
 //		}
 
 		standardTile("poolSpaMode", "device.poolSpaMode", width: 2, height: 2, decoration: "flat") {
-			state "spa",        label: "",           action: "setPoolMode", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/spa.png",  backgroundColor: "#79b821", nextState: "turningOff"
-			state "pool",       label: "",           action: "setSpaMode",  icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/Pool.png", backgroundColor: "#ffffff", nextState: "turningOn"
-			state "turningOn",  label: 'changing',   action: "pool",        icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/spa.png",  backgroundColor: "#79b821", nextState: "turningOff"
-			state "turningOff", label: 'changing',   action: "spa",         icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/Pool.png", backgroundColor: "#ffffff", nextState: "turningOn"
+			state "on",         label: "",           action: "setPoolMode", icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/spa.png",  backgroundColor: "#79b821", nextState: "turningOff"
+			state "off",        label: "",           action: "setSpaMode",  icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/Pool.png", backgroundColor: "#ffffff", nextState: "turningOn"
+			state "turningOn",  label: 'changing',   action: "setPoolMode",        icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/spa.png",  backgroundColor: "#79b821", nextState: "turningOff"
+			state "turningOff", label: 'changing',   action: "setSpaMode",         icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/Pool.png", backgroundColor: "#ffffff", nextState: "turningOn"
 			state "disabled",   label:'',            icon: "https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/all-white.png", backgroundColor: "#ffffff"
 		}
 		standardTile("switch1", "device.switch1", width: 1, height: 1, decoration: "flat") {
@@ -474,41 +509,66 @@ metadata {
 		valueTile("M4Name", "device.M4Name", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
 			state "M4Name", label:'${currentValue}', backgroundColor:"#ffffff", action: "setMode4"
 		}
-        standardTile("blank1", "device.blank", width: 1, height: 1, decoration: "flat") {
+        standardTile("blank1", "device.blank", width: 2, height: 1, decoration: "flat") {
 			state "on",         icon: "st.Health & Wellness.health2",  backgroundColor: "#ffffff"
 		}
-        standardTile("refresh", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
+        standardTile("refresh", "device.switch", width: 1, height: 1, inactiveLabel: false, decoration: "flat") {
 			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
 		}
-        standardTile("configure", "device.configure", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-			state "configure", label:'', action:"configuration.configure", icon:"st.secondary.configure"
+		valueTile("clock", "device.clock", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
+			state "clockName", label:'${currentValue}', backgroundColor:"#ffffff", action: "setClock"
 		}
-        standardTile("blank2", "device.blank", width: 2, height: 2, decoration: "flat") {
-			state "on",         label: "", icon: "st.Health & Wellness.health2",  backgroundColor: "#ffffff"
+		valueTile("heaterLabel", "device.heaterLabel", width: 1, height: 1, inactiveLabel: false, decoration: "flat") {
+			state "airTemp", label:'  HEAT:', backgroundColor:"#ffffff"
+		}
+		standardTile("heaterTile", "device.heater", width: 2, height: 1, canChangeIcon: true) {
+			state "off",        label: "heater off",   icon: "st.Health & Wellness.health2",  backgroundColor: "#ffffff"
+			state "on",         label: "*HEATING*",  icon: "st.Health & Wellness.health2", backgroundColor: "#bc2323"
+		}
+//        standardTile("configure", "device.configure", width: 1, height: 1, inactiveLabel: false, decoration: "flat") {
+//			state "configure", label:'', action:"configuration.configure", icon:"st.secondary.configure"
+//		}
+        standardTile("blank3", "device.blank3", width: 1, height: 1, decoration: "flat") {
+			state "on",     label: "", icon: "st.Health & Wellness.health2",  backgroundColor: "#ffffff"
 		}
         
 	main "mainTile"
+//	main "temperatureTile"
         details([
-            "blank1",
+            "blank3",
             "switch1","switch2","switch3","switch4","switch5",
             "poolSpaMode",
         	"temperatureTile",
             "swVSP1","swVSP2","swVSP3","swVSP4",
-            "swM1", "M1Name", "swM2", "M2Name", "swM3", "M3Name", "swM4", "M4Name",
-			"poolSliderControl", "poolSetpoint", "spaSliderControl", "spaSetpoint",
-//            "pumpSpeedSliderControl", "pumpSpeed",
-            "configure","refresh", "blank2",
-            "lightColorSliderControl","lightColor"])
+			"poolSetpoint", "poolSliderControl",
+            "swM1", "M1Name",
+            "spaSetpoint", "spaSliderControl", 
+            "swM2", "M2Name",
+            "lightColor","lightColorSliderControl",
+            "swM3", "M3Name",
+			"heaterLabel", "heaterTile",
+            "swM4", "M4Name",
+			"airTempLabel", "airTempTile",
+			"refresh",
+            "clock",
+//            "blank1",
+//            "configure",
+            ])
 	}
 }
 
 // Constants for PE653 configuration parameter locations
 def getDELAY () {ZWdelay}								// How long to delay between commands to device (configured)
 def getMIN_DELAY () {"800"}								// Minimum delay between commands to device (configured)
-def getVERSION () {"Ver 2.06"}							// Keep track of handler version
+def getVERSION () {"Ver 3.00"}							// Keep track of handler version
 def getPOOL_SPA_SCHED_PARAM () { 21 }					// Pool/Spa mode Schedule #3 - 0x15
+def getPOOL_SPA_CHAN () { 39 }							// Pool/Spa channel - 0x27
+def getPOOL_SPA_EP () { 6 }								// Pool/Spa endpoint - 6
 def getVSP_SCHED_NO (int spd) { (35 + (spd * 3)) }		// VSP Speed 1 Schedule #3 - 0x26
 def getVSP_SPEED (int sched) { ((sched - 35) / 3) }		// Convert from sched to speed
+def getVSP_CHAN_NO (int spd) { (16 + (spd - 1)) }		// VSP Speed 1 Channel  - 0x10 - 0x13
+def getVSP_EP (int spd) { (6 + spd) }					// VSP Endpoint 7 - 10
+def getVSP_SPEED_FROM_CHAN (int chan) { ((chan - 16) + 1) }	// Convert from channel to speed - 0x10
 def getVSP_ENABLED () { (operationMode2 >= "4") ? 1 : 0 }	// True if a Variable Speed Pump Configured
 def getPOOL_SPA_COMBO () { (poolSpa1 == "2") ? 1 : 0 }	// True if both Pool and Spa
 def getSWITCH_NAME (int instance) {
@@ -537,20 +597,39 @@ def getSupportedCmdClasses () {[
 // Main entry point for messages from the device
 def parse(String description) {
 	def result = null
+    def command = null
+    byte[] payload = []
 	if (description.startsWith("Err")) {
         log.warn "Error in Parse"
 	    result = createEvent(descriptionText:description, isStateChange:true)
 	} else {
-//		def cmd = zwave.parse(description, [0x20: 1, 0x25:1, 0x27:1, 0x31:1, 0x43:1, 0x60:3, 0x70:2, 0x81:1, 0x85:1, 0x86: 1, 0x73:1])
-		def cmd = zwave.parse(description, [0x20: 1, 0x25:1, 0x27:1, 0x31:1, 0x43:1, 0x60:3, 0x70:2, 0x81:1, 0x85:2, 0x86: 1, 0x73:1])
-		if (debugLevel > "0") {
-			log.debug(">>>>> ${cmd} - description:$description ")
-    	}
-		if (cmd) {
-			result = zwaveEvent(cmd)
-        } else {
-			log.debug("----- Parse() parsed to NULL:  description:$description")
-		}
+//		try {
+            def command1 = description.split('command:')[1]
+            command = command1.split(',')[0]
+            def payloadStr = description.split('payload:')[1]
+//			log.debug "cmd: ${command}   payloadStr: ${payloadStr}"
+            if (command.contains("9100")) {
+				payload = payloadStr.replace(" ","").decodeHex()
+                if (debugLevel > "0") {
+//                    log.debug(">>>>> unParsed cmd - description:$description ")
+                }
+				result = zwaveEventManufacturerProprietary(payload, payloadStr)
+			} else {
+//				def cmd = zwave.parse(description, [0x20: 1, 0x25:1, 0x27:1, 0x31:1, 0x43:1, 0x60:3, 0x70:2, 0x81:1, 0x85:1, 0x86: 1, 0x73:1])
+                def cmd = zwave.parse(description, [0x20: 1, 0x25:1, 0x27:1, 0x31:1, 0x43:1, 0x60:3, 0x70:2, 0x72:1, 0x81:1, 0x85:2, 0x86: 1, 0x73:1, 0x91:1])
+                if (debugLevel > "0") {
+                    log.debug(">>>>> ${cmd} - description:$description ")
+                }
+                if (cmd) {
+                    result = zwaveEvent(cmd)
+                } else {
+                    log.debug("----- Parse() parsed to NULL:  description:$description")
+                    return null
+                }
+            }
+//        } catch (e) {
+//			log.warn("..... Exception in Parse() ${cmd} - description:${description} exceptioon ${e}")
+//        }
 	}
 	delayResponseLog(result)
 }
@@ -572,10 +651,10 @@ private List setPoolSetpointInternal(Double degrees) {
     	convertedDegrees = degrees
     }
     deviceScale = 0			// Cannot send scale = 1 to PE653 or it will ignore the request
-//    log.trace "setPoolSetpoint: setpointType: 1  scale: $deviceScale  precision: $p  scaledValue: $convertedDegrees"
 	cmds << zwave.thermostatSetpointV1.thermostatSetpointSet(setpointType: 1, scale: deviceScale, precision: p, scaledValue: convertedDegrees)
 	cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 1)
-//    cmds
+//    log.trace "setPoolSetpoint: setpointType: 1  scale: $deviceScale  precision: $p  scaledValue: $convertedDegrees"
+	cmds
 }
 
 private List setSpaSetpointInternal(Double degrees) {
@@ -598,7 +677,7 @@ private List setSpaSetpointInternal(Double degrees) {
 //    log.trace "setSpaSetpoint: setpointType: 7  scale: $deviceScale  precision: $p  scaledValue: $convertedDegrees"
 	cmds << zwave.thermostatSetpointV1.thermostatSetpointSet(setpointType: 7, scale: deviceScale, precision: p,  scaledValue: convertedDegrees)
 	cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 7)
-//    cmds
+    cmds
 }
 
 // Ask the controller for the water temperature
@@ -624,6 +703,14 @@ def zwaveEvent(physicalgraph.zwave.commands.versionv1.VersionCommandClassReport 
     }
 }
 
+def zwaveEvent(physicalgraph.zwave.commands.clockv1.ClockReport cmd) {
+	def time1 = ""
+    time1 = "${String.format("%02d",cmd.hour)}:${String.format("%02d",cmd.minute)}"
+	log.debug "from PE653: ${time1}"    
+	state.VersionInfo = "ClockReport: ${time1}"
+	createEvent(name: "clock", value: "${time1}", displayed: false, descriptionText: "PE653 Clock: ${time1}")
+}
+
 def zwaveEvent(physicalgraph.zwave.commands.thermostatsetpointv1.ThermostatSetpointSupportedReport cmd) {
 //	log.debug "thermostatSetpointSupportedReport !!!"
 	def cmds = []
@@ -634,6 +721,130 @@ def zwaveEvent(physicalgraph.zwave.commands.thermostatsetpointv1.ThermostatSetpo
 	}
     
 	cmds
+}
+
+def zwaveEventManufacturerProprietary(byte [] payload, payloadStr) {
+	log.debug "ManufacturerProprietary event, [1]:${String.format("%02X",payload[1])}  [4]:${String.format("%02X",payload[4])}  payload: ${payloadStr}"
+    def rslt = []
+	byte [] oldResp  = [1,2,3,4]
+	def respType = 0
+	def diffCnt = 0
+	def oldP = ""
+    def newP = ""
+	def oldD = ""
+    def newD = ""
+    def head = ""
+    if (payload[1] == 0x40 && payload[4] == -124) {
+    	respType = 84
+        oldResp = state.manProp1
+        state.manProp1 = payload
+        rslt = process84Event(payload)
+    } else if (payload[1] == 0x40 && payload[4] == -121) {
+    	respType = 87
+        oldResp = state.manProp2
+        state.manProp2 = payload
+        rslt = process87Event(payload)
+    } else if (payload[1] == 0x41) {
+    	respType = 41
+        oldResp = state.manProp3
+        state.manProp3 = payload
+//        rslt = process41Event(payload)
+     } else {
+     	log.warn "Unexpected ManufacturersProprietary event received !!"
+     }
+//     log.debug "respType:${respType}  oldResp: ${oldResp}"
+     if (oldResp == null) {oldResp = (byte[])[0,1,2,3,4] as byte [];log.debug "==null forced to array"}
+     for (def i=0;i<payload.length;i++) {
+   		oldP += " ${String.format("%03X",oldResp[i])}"
+   		newP += " ${String.format("%03X",payload[i])}"
+   		oldD += " ${String.format("%03d",oldResp[i])}"
+   		newD += " ${String.format("%03d",payload[i])}"
+		if (oldResp[i] != payload[i] && (
+        	(respType == 84 && (i != CLOCK_MINUTE_84 && i != CLOCK_HOUR_84)) ||
+        	(respType == 87 && (i != CLOCK_MINUTE_87 && i != CLOCK_HOUR_87)) ||
+        	(respType == 41 && (i != 99))
+        )) {
+        	diffCnt++
+            head += " ${String.format("%03d",i)} "
+        } else {
+            head += "___ "
+        }
+     }
+     if (diffCnt && debugLevel >= "1") {
+//	     log.debug "respType:${respType}  differences:${diffCnt}\n__ __ ${head}\nnew-: ${newP}\nold-- :   ${oldP}\nnew: ${newD}\nold- :   ${oldD}"
+	     log.debug "respType:${respType}  differences:${diffCnt}\n__ __ ${head}\nnew-: ${newP}\nold-- :   ${oldP}"
+     } 
+	rslt
+}
+
+	def getCLOCK_MINUTE_84 () { 16 }			// Clock Minute
+	def getCLOCK_HOUR_84 () { 15 }				// Clock Hour
+	def getWATER_TEMP_84 () { 12 }				// Water Temperature
+	def getAIR_TEMP_84 () { 13 }				// Air Temperature
+	def getSWITCHES_84 () { 8 }					// Bit mask of 5 switches. SW1 = 01X, SW5 = 10X
+	def getPOOL_SPA_MODE_84 () { 11 }			// Pool/Spa mode. 01x Pool mode, 00x Spa mode
+	def getVSP_SPEED_84 () { 20 }				// VSP Speed bit mask. 01x = VSP1, 08x = VSP4
+
+// Received a ManufacturerProprietary message. Pull the important details and update the UI controls
+def process84Event(byte [] payload) {
+//	log.debug "process84Event payload: ${payload}"
+    def rslt = []
+    def map = [:]
+	def str = ""
+    def val = 0
+	def ch = 0
+
+	def swMap = ['1':1, '2':2, '3':4, '4':8, '5':16]
+	for (sw in swMap) {
+    	if (payload[SWITCHES_84] & sw.value) {
+            val = 0xFF
+        } else {
+            val = 0
+        }
+		rslt.addAll(createMultipleEvents(sw.key.toInteger(), val, (val == 0) ? "off": "on"))
+    }
+
+	for (vsp in ['1':1, '2':2, '3':4, '4':8]) {
+    	if (payload[VSP_SPEED_84] & vsp.value) {
+            val = 0xFF
+        } else {
+            val = 0
+        }
+        ch = getVSP_EP(vsp.key.toInteger())
+		rslt.addAll(createMultipleEvents(ch, val, (val == 0) ? "off": "on"))
+    }
+
+//	Set Pool/Spa mode indicator
+	val = ((payload[POOL_SPA_MODE_84] & 0x01) == 0) ? 0xFF : 0
+	rslt.addAll(createMultipleEvents(POOL_SPA_EP, val, (val == 0) ? "off": "on"))
+
+//	Update Water Temperature
+    rslt << createEvent(name: "temperature", value: payload[WATER_TEMP_84], unit: "F", displayed: false)
+
+//	Update Air Temperature
+    rslt << createEvent(name: "airTemp", value: "${payload[AIR_TEMP_84]}", unit: "F", displayed: false)
+
+//	Update Clock
+    def time1 = "${String.format("%02d",payload[CLOCK_HOUR_84])}:${String.format("%02d",payload[CLOCK_MINUTE_84])}"
+//	log.debug "from PE653: ${time1}"
+	state.VersionInfo = "ClockReport: ${time1}"
+	rslt << createEvent(name: "clock", value: "${time1}", displayed: false, descriptionText: "PE653 Clock: ${time1}")
+
+	rslt
+}
+
+	def getHEATER_87 () { 15 }					// Heater. 04x = on, 00x = off
+	def getCLOCK_MINUTE_87 () { 25 }			// Clock Minute
+	def getCLOCK_HOUR_87 () { 24 }				// Clock Hour
+
+// Received a ManufacturerProprietary message. Pull the important details and update the UI controls
+def process87Event(byte [] payload) {
+//	log.debug "process87Event payload: ${payload}"
+    def rslt = []
+    def val = ((payload[HEATER_87] & 0x04) == 0) ? "off" : "on"
+    rslt << createEvent(name: "heater", value: "$val", isStateChange: true, displayed: true, descriptionText: "Heater is ${val}")
+
+	rslt
 }
 
 // ManufacturerSpecificReport(manufacturerId: 5, manufacturerName: Intermatic, productId: 1619, productTypeId: 20549) 
@@ -665,43 +876,8 @@ def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport 
 			map.name = "temperatureOffsets"
 			cmds << createEvent(map)
 			break;
-		case POOL_SPA_SCHED_PARAM:
-			def instance = 6
-			if ((cmd.size != 4) || (cmd.configurationValue[0] != 0xFF) || (cmd.configurationValue[1] != 0xFF) || (cmd.configurationValue[2] != 0xFF) || (cmd.configurationValue[3] != 0xFF)) {
-            	myValue = "spa"
-                externalValue = 0xFF
-            } else {
-            	myValue = "pool"
-                externalValue = 0x00
-            }
-			cmds.addAll(createMultipleEvents (instance, 0x25, 0x03, externalValue, myValue))
-			break;
-		case getVSP_SCHED_NO(1):
-		case getVSP_SCHED_NO(2):
-		case getVSP_SCHED_NO(3):
-		case getVSP_SCHED_NO(4):
-            def int instance = getVSP_SPEED(paramNum) + 6
-			if ((cmd.size != 4) || (cmd.configurationValue[0] != 0xFF) || (cmd.configurationValue[1] != 0xFF) || (cmd.configurationValue[2] != 0xFF) || (cmd.configurationValue[3] != 0xFF)) {
-                state.pumpSpeed = getVSP_SPEED(paramNum).toString()
-                map.value = state.pumpSpeed.toInteger()
-				map.name = "pumpSpeed"
-                cmds << createEvent(map)
-            	myValue = "on"
-                externalValue = 0xFF
-			} else {
-            	if (paramNum == getVSP_SCHED_NO(4)) {
-                    map.value = state.pumpSpeed.toInteger()
-                    map.name = "pumpSpeed"
-                    cmds << createEvent(map)
-                }
-            	myValue = "off"
-                externalValue = 0
-            }
-			cmds.addAll(createMultipleEvents (instance, 0x25, 0x03, externalValue, myValue))
-			break;
 	}
     if (debugLevel > "1") {
-//		log.trace " map:$map map.name.length():${map.name.length()}"    
         def lst = [cmd.size]
 	    state.cnfAttemptsLeft[paramNum] = 0
 		state.cnfParallelGets = state.cnfParallelGets - 1
@@ -848,31 +1024,12 @@ def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicGet cmd) {
 	delayBetweenLog(cmds)
 }
 
-//Fabricate endpoint info based on the number of real endpoints in the device, plus extras for virtual switches
-private List createEndpointInfo(int endPoints) {
-	def eps = []
-	def int endpointCnt = endPoints + 1 + 4		// 1 for Pool/Spa + 4 for VSP speed
-	for (def i=1;i<=endpointCnt;i++) {
-		if (i==1) {
-        	eps << "10012527"
-//		} else if (i == 7) {
-//        	eps << "110025"
-        } else {
-        	eps << "100025"
-        }
-	}            
-    log.trace "createEndpointInfo(${endPoints}) endpointCnt=${endpointCnt} eps=${eps}"
-	eps
-}
-
 def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiInstanceReport cmd) {
-	state.endpointInfo = createEndpointInfo(cmd.instances)
-	[ createEvent(name: "epInfo", value: util.toJson(state.endpointInfo), displayed: true, descriptionText:"")]
+	log.debug("MultiInstanceReport cmd=${cmd}")
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiChannelEndPointReport cmd) {
-	state.endpointInfo = createEndpointInfo(cmd.endpoints)
-	[ createEvent(name: "epInfo", value: util.toJson(state.endpointInfo), displayed: true, descriptionText:"")]
+	log.debug("MultiChannelEndPointReport cmd=${cmd}")
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.associationv2.AssociationReport cmd) {
@@ -884,29 +1041,40 @@ def zwaveEvent(physicalgraph.zwave.commands.associationv2.AssociationGroupingsRe
     []
 }
 
-/*
-def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
-	log.debug "got here - chan"
-    def encapsulatedCommand = cmd.encapsulatedCommand([0x32: 3, 0x25: 1, 0x20: 1])
-	log.debug "encapsulatedCommand: $encapsulatedCommand"
-	if (encapsulatedCommand) {
-		if (state.enabledEndpoints.find { it == cmd.sourceEndPoint }) {
-			def formatCmd = ([cmd.commandClass, cmd.command] + cmd.parameter).collect{ String.format("%02X", it) }.join()
-            createEvent(name: "epEvent", value: "$cmd.sourceEndPoint:$formatCmd", isStateChange: true, displayed: false, descriptionText: "(fwd to ep $cmd.sourceEndPoint)")
-        } else {
-			zwaveEvent(encapsulatedCommand, cmd.sourceEndPoint as Integer)
-		}
-	}
-}
-*/
 
 // Multi-channel event from the device
 def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiInstanceCmdEncap cmd) {
 	def rslt = []
     def String myStr = (cmd.parameter[0] == 0) ? "off": "on"
+    def sw = 0
 	def encapsulatedCommand = cmd.encapsulatedCommand([0x32: 3, 0x25: 1, 0x20: 1])
 	if (encapsulatedCommand) {
-		rslt.addAll(createMultipleEvents(cmd.instance, cmd.commandClass, cmd.command, cmd.parameter[0], myStr))
+		switch(cmd.instance) {
+			case 1:
+			case 2:
+			case 3:
+			case 4:
+			case 5:
+                sw = cmd.instance
+                break;
+
+            case POOL_SPA_CHAN:
+                sw = POOL_SPA_EP
+                break;
+                
+            case getVSP_CHAN_NO(1):
+            case getVSP_CHAN_NO(2):
+            case getVSP_CHAN_NO(3):
+            case getVSP_CHAN_NO(4):
+                sw = (cmd.instance - getVSP_CHAN_NO(1)) + 7
+                break;
+			default:
+                log.warn "..... MultiInstanceCmdEncap  - UNKNOWN INSTANCE=${cmd.instance}"
+                return []
+        }
+
+//    def String myStr = (cmd.parameter[0] == 0) ? "off": "on"
+		rslt.addAll(createMultipleEvents(sw, cmd.parameter[0], myStr))
 	} else {
 		log.warn "MultiInstanceCmdEncap: Could not de-encapsulate!!!"
 	}
@@ -914,11 +1082,11 @@ def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiInstanceCmdEncap
 }
 
 // Used to update our own switches state as well as the exposed Multi-channel switches
-private List sendMultipleEvents (Integer instance, Integer cmdClass, Integer cmdVal, Integer externalParm, String myParm) {
+private List sendMultipleEvents (Integer endpoint, Integer externalParm, String myParm) {
 	if (debugLevel > "1") {
-        log.debug "..... sendMultipleEvents( instance:$instance, cmdClass:$cmdClass, cmdVal:$cmdVal, externalParm:$externalParm, myParm:$myParm)"
+        log.debug "..... sendMultipleEvents( endpoint:$endpoint, externalParm:$externalParm, myParm:$myParm)"
     }
-	def rslt = createMultipleEvents(instance, cmdClass, cmdVal, externalParm, myParm)
+	def rslt = createMultipleEvents(endpoint, externalParm, myParm)
 	rslt.each {e ->
 		if (debugLevel > "0") {
 			log.debug "<<<<< Event: $e"
@@ -929,25 +1097,34 @@ private List sendMultipleEvents (Integer instance, Integer cmdClass, Integer cmd
 }
 
 
-// Used to update our own switches state as well as the exposed Multi-channel switches
-private List createMultipleEvents (Integer instance, Integer cmdClass, Integer cmdVal, Integer externalParm, String myParm) {
+// Used to update our own switches state as well as the child devices
+// Two Events: One event is immediately sent to the child device and another is returned to our own UI control
+private List createMultipleEvents (Integer endpoint, Integer externalParm, String myParm) {
 	def rslt = []
 	if (debugLevel > "1") {
-        log.debug "..... createMultipleEvents( instance:$instance, cmdClass:$cmdClass, cmdVal:$cmdVal, externalParm:$externalParm, myParm:$myParm)"
+        log.debug "..... createMultipleEvents( endpoint:$endpoint, externalParm:$externalParm, myParm:$myParm)"
     }
-    if (state.enabledEndpoints.find { it == instance }) {
-        def formatCmd = ([cmdClass, cmdVal] + externalParm).collect{ String.format("%02X", it) }.join()
-        rslt << createEvent(name: "epEvent", value: "$instance:$formatCmd", isStateChange: true, displayed: true, descriptionText: "(fwd to ep $instance)")
+
+	def children = getChildDevices()
+//	log.debug("children.size = ${children.size}")
+//	children.each {ch ->
+//    	log.debug("ch ${ch}")
+//	}
+
+    def dni = "${device.deviceNetworkId}-ep${endpoint}"
+	def devObj = getChildDevices()?.find { it.deviceNetworkId == dni }
+//	log.debug("CME: devObj = ${devObj}")
+	if (devObj) {
+		devObj.sendEvent(name: "switch", value: "$myParm", isStateChange: true, displayed: true, descriptionText: "$myParm event sent from parent device")
+        rslt << "Note:Event ${myParm} to child: ${devObj}"
     } else {
-    	log.trace "CME: CANT'T FIND INSTANCE: $instance  enabledEndpoints:${state.enabledEndpoints}"
+    	log.trace "CME: CANT'T FIND CHILD DEVICE: ${dni}"
     }
-    if (cmdClass == 0x25 && cmdVal == 3) {
-        def sw = getSWITCH_NAME(instance)
-        rslt << createEvent(name: "$sw", value: "$myParm", isStateChange: true, displayed: true, descriptionText: "($sw set to $myParm)")
-    }
+
+    def sw = getSWITCH_NAME(endpoint)
+    rslt << createEvent(name: "$sw", value: "$myParm", isStateChange: true, displayed: true, descriptionText: "($sw set to $myParm)")
     rslt
 }
-
 
 def zwaveEvent(physicalgraph.zwave.Command cmd) {
     log.warn "Captured zwave command $cmd"
@@ -956,107 +1133,10 @@ def zwaveEvent(physicalgraph.zwave.Command cmd) {
 
 //Commands
 
-// Called from the Multi-command SmartApp with a command string separated by commas
-def List epCmd(Integer ep, String cmds) {
-	def rslt = []
-	if (debugLevel > "0") {
-	    log.debug "+++++ epCmd: ep:$ep cmds:$cmds"
-    }
-    cmds.tokenize(",").each {tok ->
-        def op = null
-        def val = 0
-        
-        if (tok.contains('delay')){
-        } else if (tok.contains('2001FF')){
-            op = "Set"
-            val = 0xFF
-        } else if (tok.contains('200100')) {
-            op = "Set"
-        } else if (tok.contains('2001')) {
-			val = tok[4..5].toInteger()
-            op = "Set"
-			log.debug "contained 2001 and parm=${val}"
-        } else if (tok.contains('2002')) {
-            op = "Get"
-        } else if (tok.contains('2502')) {
-            op = "Get"
-        } else if (tok.contains('2602')) {
-            op = "Get"
-            log.debug "contained 2602  Switch Multi-level Get"
-        } else {
-            log.warn "ep Cmd not recognized: $tok"
-        }
-		if (op) {
-			switch (ep) {
-                case 1:
-                case 2:
-                case 3:
-                case 4:
-                case 5:
-                    rslt.addAll(epSendToDevice(ep, op, val))
-                    break
-                case 6:
-					if (op.equals("Set")) {
-                    	rslt.addAll(setPoolSpaMode(val))
-                    } else {
-                    	rslt.addAll(getPoolSpaMode())
-                    }
-                    break
-                case 7:
-                case 8:
-                case 9:
-                case 10:
-                	// Convert switch endpoint to a VSP speed
-					if (op.equals("Set")) {
-                        if (val > 0) {
-                            val = ep - 6
-                        }
-                        rslt.addAll(setVSPSpeedInternal( val ))
-                    } else {
-                    	rslt.addAll(getVSPSpeed())
-                    }
-                    break
-            }
-        }
-	}
-	delayBetweenLog(rslt)
-}
-
-// Forward on the Get or Set to the physical devicce as a Multi-channel encapsulated command
-private List epSendToDevice(Integer ep, String op, Integer val) {
-	def rslt = []
-	if (op.equals("Set")) {
-		rslt << encap(zwave.switchBinaryV1.switchBinarySet(switchValue: val), ep)
-    } else {
-		rslt << encap(zwave.switchBinaryV1.switchBinaryGet(), ep)
-    }
-}
-
-private encap(cmd, endpoint) {
-	if (debugLevel > "1") {
-		log.debug "..... encap() cmd:$cmd endpoint:$endpoint"
-    }
-	if (endpoint) {
-//		zwave.multiChannelV3.multiChannelCmdEncap(destinationEndPoint:endpoint, sourceEndPoint: endpoint).encapsulate(cmd)
-		zwave.multiChannelV3.multiInstanceCmdEncap(instance: endpoint).encapsulate(cmd)
-	} else {
-		cmd
-	}
-}
-
-def enableEpEvents(enabledEndpoints) {
-	if (debugLevel > "0") {
-		log.debug "+++++ enableEpEvents() enabledEndpoints: $enabledEndpoints"
-    }
-	state.enabledEndpoints = enabledEndpoints.split(",").findAll()*.toInteger()
-	log.debug "state: $state"
-	null
-}
-
+// Called occasionally although not consistently
 def List poll() {
 	log.debug "+++++ poll()"
-//	refreshLight()
-	getWaterTemp()
+    delayBetweenLog(addRefreshCmds([]))
 }
 
 private initUILabels() {
@@ -1064,73 +1144,66 @@ private initUILabels() {
 	sendEvent(name: "M2Name", value: (M2Label ? "${M2Label}" : ""), isStateChange: true, displayed: true, descriptionText: "init M2 Label to ${M2Label}")
 	sendEvent(name: "M3Name", value: (M3Label ? "${M3Label}" : ""), isStateChange: true, displayed: true, descriptionText: "init M3 Label to ${M3Label}")
 	sendEvent(name: "M4Name", value: (M4Label ? "${M4Label}" : ""), isStateChange: true, displayed: true, descriptionText: "init M4 Label to ${M4Label}")
+    if ( !VSP_ENABLED ) {
+    	sendEvent(name: "swVSP1", value: "disabled", displayed: true, descriptionText:"")
+    	sendEvent(name: "swVSP2", value: "disabled", displayed: true, descriptionText:"")
+    	sendEvent(name: "swVSP3", value: "disabled", displayed: true, descriptionText:"")
+    	sendEvent(name: "swVSP4", value: "disabled", displayed: true, descriptionText:"")
+    }
+	if ( !POOL_SPA_COMBO ) {
+    	sendEvent(name: "poolSpaMode", value: "disabled", displayed: true, descriptionText:"poolSpaMode is disabled")
+    }
 }
 
+// Called only by an explicit push of the "Refresh" button
 def List refresh() {
 	log.debug "+++++ refresh()  DTH:${VERSION}  state.Versioninfo=${state.VersionInfo}"
     def cmds = []
- 	if (debugLevel > "1") {
+    
+/*
+	cmds.addAll(getPoolSpaMode())
+	for (int sw=1;sw<=5;sw++) {		// Request state of all 5 PE653 switches
+		cmds.addAll(getChanState( sw ))
+	}
+    cmds.addAll(getVSPSpeed())
+*/
+	cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 1)
+    cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 7)
+
+	cmds << zwave.versionV1.versionGet()
+	cmds << zwave.manufacturerSpecificV1.manufacturerSpecificGet()
+//	cmds << zwave.associationV2.associationGroupingsGet()
+//	cmds << zwave.multiInstanceV1.multiInstanceGet(commandClass:37)
+
+ 	if (debugLevel <= "1") {
+        cmds << zwave.configurationV2.configurationGet(parameterNumber: 1)
+        cmds << zwave.configurationV2.configurationGet(parameterNumber: 2)
+        cmds << zwave.configurationV2.configurationGet(parameterNumber: 3)
+        cmds << zwave.configurationV2.configurationGet(parameterNumber: 19)
+	} else {
     	compareConfig()
         state.ccVersions = [:]
         getSupportedCmdClasses().each {cc ->
             cmds << zwave.versionV1.versionCommandClassGet(requestedCommandClass: cc)
         }
-    }
-    cmds.addAll(refreshLight())
-
- 	if (0 || debugLevel <= "1") {
-        cmds << zwave.configurationV2.configurationGet(parameterNumber: 1)
-        cmds << zwave.configurationV2.configurationGet(parameterNumber: 2)
-        cmds << zwave.configurationV2.configurationGet(parameterNumber: 3)
-        cmds << zwave.configurationV2.configurationGet(parameterNumber: 19)
-	}
-	cmds << zwave.versionV1.versionGet()
-	cmds << zwave.manufacturerSpecificV1.manufacturerSpecificGet()
-//	cmds << zwave.associationV2.associationGroupingsGet()
-//	cmds << zwave.multiInstanceV1.multiInstanceGet(commandClass:37)
-	delayBetweenLog(cmds)
-}
-
-// Used by the refresh() command and also by poll()
-private List refreshLight() {
-    def cmds = []
-	cmds.addAll(getWaterTemp())
-	cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 1)
-    cmds << zwave.thermostatSetpointV1.thermostatSetpointGet(setpointType: 7)
-    cmds.addAll(getPoolSpaMode())
-    cmds.addAll(getVSPSpeed())
-
-	for (int i=1;i<=5;i++) {
-//		cmds << zwave.multiChannelV3.multiChannelCmdEncap(destinationEndPoint:i, sourceEndPoint: i).encapsulate(zwave.switchBinaryV1.switchBinaryGet())
-	    cmds << zwave.multiInstanceV1.multiInstanceCmdEncap(instance:i).encapsulate(zwave.switchBinaryV1.switchBinaryGet())
-	}
-
- 	if (debugLevel > "1") {
 	    cmds.addAll( restartConfig() )
     }
-    cmds
+	delayBetweenLog(addRefreshCmds(cmds))
 }
 
 def List updated() {
 	log.debug "+++++ updated()    DTH:${VERSION}  state.Versioninfo=${state.VersionInfo}"
-    def cmds = []
+
+	createChildDevices()
 	initUILabels()
-	def lightCircuits = []
-	if (C1ColorEnabled == "1") {lightCircuits << 1}
-	if (C2ColorEnabled == "1") {lightCircuits << 2}
-	if (C3ColorEnabled == "1") {lightCircuits << 3}
-	if (C4ColorEnabled == "1") {lightCircuits << 4}
-	if (C5ColorEnabled == "1") {lightCircuits << 5}
-    state.lightCircuitsList = lightCircuits
-//log.trace("lightCircuits=${lightCircuits}  C3ColorEnabled=${C3ColorEnabled}")    
-	delayBetweenLog(internalConfigure())
+    state.lightCircuitsList = getLightCircuits()
+	delayBetweenLog(addRefreshCmds(internalConfigure()))
 }
 
 def List configure() {
 	log.debug "+++++ configure()    DTH:${VERSION}  state.Versioninfo=${state.VersionInfo}"
-//    def cmds = []
 	initUILabels()
-	delayBetweenLog(internalConfigure())
+	delayBetweenLog(addRefreshCmds(internalConfigure()))
 }
 
 private List internalConfigure() {
@@ -1146,10 +1219,6 @@ private List internalConfigure() {
     cmds << zwave.configurationV2.configurationSet(parameterNumber: 19, size: 1, configurationValue: [poolSpa1.toInteger()])
     cmds << zwave.configurationV2.configurationSet(parameterNumber: 2,  size: 1, configurationValue: [fireman.toInteger()])
 
-//    cmds << zwave.associationV2.associationGroupingsGet()
-//    cmds << zwave.associationV2.associationSet(groupingIdentifier:1, nodeId:zwaveHubNodeId)
-//    cmds << zwave.associationV2.associationGet(groupingIdentifier:1)
-
 	if (debugLevel <= "1") {
 		cmds << zwave.configurationV2.configurationGet(parameterNumber: 1)
         cmds << zwave.configurationV2.configurationGet(parameterNumber: 2)
@@ -1159,22 +1228,95 @@ private List internalConfigure() {
 		cmds.addAll(startConfig())
 		log.trace "state=$state"
     }
-log.trace "VSP_ENABLED:${VSP_ENABLED}"
-    if ( !VSP_ENABLED ) {
-    	cmds << createEvent(name: "swVSP1", value: "disabled", displayed: true, descriptionText:"")
-    	cmds << createEvent(name: "swVSP2", value: "disabled", displayed: true, descriptionText:"")
-    	cmds << createEvent(name: "swVSP3", value: "disabled", displayed: true, descriptionText:"")
-    	cmds << createEvent(name: "swVSP4", value: "disabled", displayed: true, descriptionText:"")
-    } else {
+	log.trace "VSP_ENABLED: ${VSP_ENABLED}"
+    if ( VSP_ENABLED ) {
     	cmds.addAll(getVSPSpeed())
     }
-log.trace "POOL_SPA_COMBO:${POOL_SPA_COMBO}"
-	if ( !POOL_SPA_COMBO ) {
-    	cmds << createEvent(name: "poolSpaMode", value: "disabled", displayed: true, descriptionText:"poolSpaMode is disabled")
-    } else {
+	log.trace "POOL_SPA_COMBO:${POOL_SPA_COMBO}"
+	if ( POOL_SPA_COMBO ) {
     	cmds.addAll(getPoolSpaMode())
     }
-	cmds    
+
+//    cmds << zwave.associationV2.associationGroupingsGet()
+//    cmds << zwave.associationV2.associationSet(groupingIdentifier:1, nodeId:zwaveHubNodeId)
+//    cmds << zwave.associationV2.associationGet(groupingIdentifier:1)
+	cmds
+}
+
+private void createChildDevices() {
+	state.oldLabel = device.label
+	def oldChildren = getChildDevices()
+	log.trace("Existing children: ${oldChildren}")
+
+	for (childNo in 1..5) {
+		addOrReuseChildDevice(childNo, "${device.displayName} (S${childNo})", oldChildren)
+    }
+	if ( POOL_SPA_COMBO ) {
+		def childNo = 6
+		addOrReuseChildDevice(childNo, "${device.displayName} (Pool/Spa)", oldChildren)
+	}
+	if ( VSP_ENABLED ) {
+        for (childNo in 7..10) {
+			addOrReuseChildDevice(childNo, "${device.displayName} (VSP${childNo-6})", oldChildren)
+        }
+    }
+	removeChildDevices(oldChildren)
+}
+
+private Object addOrReuseChildDevice(childNo, name, List oldChildren){
+	def Object devObj = null
+    def dni = "${device.deviceNetworkId}-ep${childNo}"
+//	log.trace("addOrReuseChildDevice dni=${dni} oldChildren.size=${oldChildren.size} oldChildren: ${oldChildren}")
+
+	devObj = oldChildren.find {it.deviceNetworkId == dni}
+    if ( devObj ) {
+//		log.trace("found existing device=${devObj.name} dni=${devObj.deviceNetworkId}")
+    	oldChildren.remove(devObj)
+//		log.trace(" after remove dni=${dni} oldChildren.size=${oldChildren.size}")
+    } else {
+        try {
+            log.trace("addChildDevice(namespace=\"erocm123\",DTH Name=\"Switch Child Device\", dni=\"${dni}\", hubId=null,"+
+                      "properties=[completedSetup: true, label: \"${name}\","+
+                      "isComponent: false, componentName: \"ep${childNo}\", componentLabel: \"Switch ${childNo}\"]")
+
+            addChildDevice("erocm123", "Switch Child Device", dni, null, [completedSetup: true, label: name,
+                            isComponent: false, componentName: "ep${childNo}", componentLabel: "Switch ${childNo}"])
+        } catch (e) {
+            log.trace("addChildDevice failed: ${e}")
+        }
+	}
+}
+
+private removeChildDevices(List oldChildren){
+	log.debug("RemoveChildDevices(before) count=${oldChildren.size} children: ${oldChildren}")
+    try {
+        oldChildren.each {child ->
+//	    	log.debug("remove child name=${child.name} displayName=${child.displayName} label=${child.label} dni=${child.deviceNetworkId} id=${child.id}")
+            deleteChildDevice(child.deviceNetworkId)
+        }
+    } catch (e) {
+        log.debug "Error deleting ${child}, either it didn't exist or probably locked into a SmartApps: ${e}"
+    }
+}
+
+// Request a report back from with the Clock time from the PE653
+private List getClock() {
+	log.debug "+++++ getClock"
+	def cmds =[zwave.clockV1.clockGet()]
+	cmds
+}
+
+// Set the PE653 clock from the mobile client clock
+def List setClock() {
+	def cmds = []
+	log.debug "+++++ setClock()"
+    def nowCal = Calendar.getInstance(location.timeZone)
+	def time2 = "${String.format("%02d",nowCal.get(Calendar.HOUR_OF_DAY))}:${String.format("%02d",nowCal.get(Calendar.MINUTE))}"
+//	log.debug "Time:${time2}"
+	cmds << zwave.clockV1.clockSet(hour: "${nowCal.get(Calendar.HOUR_OF_DAY)}".toInteger(), minute: "${nowCal.get(Calendar.MINUTE)}".toInteger())
+	cmds << createEvent(name: "clock", value: "${time2}", displayed: false, descriptionText: "PE653 Clock: ${time2}")
+
+	delayBetweenLog(cmds)
 }
 
 // Query the four VSP scheduled to determine which speed is enabled
@@ -1184,20 +1326,16 @@ private List getVSPSpeed() {
     if ( VSP_ENABLED ) {
         state.pumpSpeed = '0'		// Assume off unless a schedule is returned on
         for (int sp=1;sp<=4;sp++) {
-            cmds << zwave.configurationV2.configurationGet(parameterNumber: getVSP_SCHED_NO(sp))
+            cmds.addAll(getChanState(getVSP_CHAN_NO(sp)))
         }
     }
 	cmds
 }
 
-// Select a VSP speed by forcing the appropriate schedule to always on. speed is from 1-4
-// Called from the slider tile in the app
+// Select a VSP speed and request a report to confirm
 private List setVSPSpeedAndGet(Integer speed) {
 	log.debug "+++++ setVSPSpeedAndGet()  speed=${speed}"
 	def cmds = []
-//	def l = setVSPSpeedInternal(speed)
-//	log.trace("l = $l")
-//	cmds.addAll(l)
 	cmds.addAll(setVSPSpeedInternal(speed))
 	cmds.addAll(getVSPSpeed())
 	cmds
@@ -1209,14 +1347,14 @@ private List setVSPSpeedAndGet(Integer speed) {
 private List setVSPSpeedInternal(Integer speed) {
 //	log.debug "+++++ setVSPSpeedInternal()  speed=${speed}"
 	def cmds = []
-	for (int sp=1;sp<=4;sp++) {
-    	if (sp == speed) {
-			cmds.addAll(setSched(getVSP_SCHED_NO(sp), 0xFF))
-		} else {
-			cmds.addAll(setSched(getVSP_SCHED_NO(sp), 0))
-        }
-	    // The following should not be necessary except I don't consistently get replies to the ConfigurationGet
-//		sendMultipleEvents ((sp + 6), 0x25, 0x03, speed, "$speed")
+    if (speed) {
+		cmds.addAll(setChanState(getVSP_CHAN_NO(speed),0xFF))
+    } else {
+        for (int sp=1;sp<=4;sp++) {
+            cmds.addAll(setChanState(getVSP_CHAN_NO(sp), 0))
+//          The following should not be necessary except I don't consistently get replies to the ConfigurationGet
+//    		sendMultipleEvents ((getVSP_EP(sp)), speed, "$speed")
+    	}
     }
 	cmds
 }
@@ -1224,7 +1362,7 @@ private List setVSPSpeedInternal(Integer speed) {
 def List getPoolSpaMode() {
 	def cmds = []
 	if ( POOL_SPA_COMBO ) {
-		cmds = [zwave.configurationV2.configurationGet(parameterNumber: POOL_SPA_SCHED_PARAM)]
+		cmds = getChanState(POOL_SPA_CHAN)
     }
     cmds
 }
@@ -1232,22 +1370,22 @@ def List getPoolSpaMode() {
 private List setPoolSpaMode(Integer val) {
 	def cmds = []
 	def myValue = ""
-	cmds.addAll(setSched(POOL_SPA_SCHED_PARAM, val))
+	cmds.addAll(setChanState(POOL_SPA_CHAN, val))
 	if (val == 0xFF) {
-        myValue = "spa"
+        myValue = "on"
     } else {
-        myValue = "pool"
+        myValue = "off"
     }
-    // The following should not be necessary except I don't consistently get replies to the ConfigurationGet
-	sendMultipleEvents (6, 0x25, 0x03, val, myValue)
+//  The following should not be necessary except I don't consistently get replies to the BasicSet on Channel 6 (inst: 0x27)
+//	sendMultipleEvents (POOL_SPA_EP, val, myValue)
     cmds
 }
 
 private List setSpaModeInternal() {
-	log.debug "+++++ setSpaMode"
+	log.debug "+++++ setSpaModeInternal"
 	def cmds = []
 	cmds.addAll(setPoolSpaMode(0xFF))
-	cmds.addAll(getPoolSpaMode())
+//	cmds.addAll(getPoolSpaMode())
 	cmds
 }
 
@@ -1255,19 +1393,19 @@ private List setPoolModeInternal() {
 	log.debug "+++++ setPoolMode"
 	def cmds = []
 	cmds.addAll(setPoolSpaMode(0))
-	cmds.addAll(getPoolSpaMode())
+//	cmds.addAll(getPoolSpaMode())
 	cmds
 }
 
 private def List togglePoolSpaModeInternal() {
 	log.debug "+++++ togglePoolSpaMode: poolSpaMode:${device.currentValue("poolSpaMode")}"
 	def cmds = []
-    if (device.currentValue("poolSpaMode").equals("spa")) {
+    if (device.currentValue("poolSpaMode").equals("on")) {
 		cmds.addAll(setPoolSpaMode(0))
     } else {
 		cmds.addAll(setPoolSpaMode(0xFF))
     }
-	cmds.addAll(getPoolSpaMode())
+//	cmds.addAll(getPoolSpaMode())
 	cmds
 }
 
@@ -1284,15 +1422,7 @@ private List setSched(int paramNum, Integer val) {
     }
 	cmds
 }
-/*
-def setPowerLevel(int pwrLvl) {
-	log.debug "+++++ setPowerLevel(${pwrLvl})"
-    delayBetweenLog([
-		zwave.powerlevelV1.powerlevelSet(powerLevel: pwrLvl),
-		zwave.powerlevelV1.powerlevelGet()
-    ])
-}
-*/
+
 def setLightColor(int col) {
 	log.debug "+++++ setColor ${col}"
 	def cmds = []
@@ -1310,6 +1440,17 @@ def setColor() {
 	delayBetweenLog(cmds)
 }
 
+// Return a list of the Light Circuits selected to have color set
+def List getLightCircuits() {
+	def lightCircuits = []
+	if (C1ColorEnabled == "1") {lightCircuits << 1}
+	if (C2ColorEnabled == "1") {lightCircuits << 2}
+	if (C3ColorEnabled == "1") {lightCircuits << 3}
+	if (C4ColorEnabled == "1") {lightCircuits << 4}
+	if (C5ColorEnabled == "1") {lightCircuits << 5}
+//	log.trace("lightCircuits=${lightCircuits}  C3ColorEnabled=${C3ColorEnabled}")    
+	lightCircuits
+}
 
 // Alternately turn a switch off then on a fixed number of times. Used to control the color of Pentair pool lights.
 private def blink(List switches, int cnt) {
@@ -1321,20 +1462,23 @@ private def blink(List switches, int cnt) {
 			if (cmds) {
 				cmds << "delay ${dly}"
             }
-            cmds << zwave.multiInstanceV1.multiInstanceCmdEncap(instance: sw, commandClass:37, command:1, parameter:[0])
+//            cmds << zwave.multiInstanceV1.multiInstanceCmdEncap(instance: sw, commandClass:37, command:1, parameter:[0])
+            cmds.addAll(setChanState(sw, 0))
 		    dly = MIN_DELAY
         }
         dly = "${DELAY}"
 		switches.each { sw ->
 	        cmds << "delay ${dly}"
-            cmds << zwave.multiInstanceV1.multiInstanceCmdEncap(instance: sw, commandClass:37, command:1, parameter:[255])
+//            cmds << zwave.multiInstanceV1.multiInstanceCmdEncap(instance: sw, commandClass:37, command:1, parameter:[255])
+            cmds.addAll(setChanState(sw, 0xFF))
 		    dly = MIN_DELAY
         }
         dly = "${DELAY}"
     }
 	switches.each { sw ->
 		cmds << "delay ${dly}"
-		cmds <<	zwave.multiInstanceV1.multiInstanceCmdEncap(instance: sw, commandClass:37, command:2)
+//		cmds <<	zwave.multiInstanceV1.multiInstanceCmdEncap(instance: sw, commandClass:37, command:2)
+        cmds.addAll(getChanState(sw))
     }
 //log.trace "blink() cmds=${cmds}"
 	cmds
@@ -1345,7 +1489,7 @@ def setMode(int mode) {
 	def cmds = []
 	List MxSw
 	String MxMode, MxTemp, MxVSP
-//log.trace "M1Sw1=${M1Sw1} M1Sw2=${M1Sw2} M1Sw3=${M1Sw3} M1Sw4=${M1Sw4} M1Sw5=${M1Sw5} M1Mode=${M1Mode} M1Temp=${M1Temp} M1VSP=${M1VSP}"
+//	log.trace "M1Sw1=${M1Sw1} M1Sw2=${M1Sw2} M1Sw3=${M1Sw3} M1Sw4=${M1Sw4} M1Sw5=${M1Sw5} M1Mode=${M1Mode} M1Temp=${M1Temp} M1VSP=${M1VSP}"
 	switch(mode) {
     case 1:
     	MxSw = [M1Sw1, M1Sw2, M1Sw3, M1Sw4, M1Sw5]; MxMode = M1Mode; MxTemp = M1Temp; MxVSP = M1VSP; break
@@ -1370,25 +1514,45 @@ def setMode(int mode) {
         cmds.addAll(setSpaSetpointInternal(MxTemp.toDouble()))
     }
 	MxSw.eachWithIndex {action, idx ->
+//    	log.debug " action=${action} idx=${idx}"
     	if (action == "1") {
-        	cmds.addAll(onMulti(idx+1))
+        	cmds.addAll(setChanState(idx.toInteger()+1,1))
         } else if (action == "2") {
-        	cmds.addAll(offMulti(idx+1))
+        	cmds.addAll(setChanState(idx.toInteger()+1,0))
         }
     }
     if (VSP_ENABLED && MxVSP != "5") {
-    	cmds.addAll(setVSPSpeedAndGet(MxVSP.toInteger()))
+    	cmds.addAll(setVSPSpeedInternal(MxVSP.toInteger()))
     }
-	cmds.addAll(getWaterTemp())
+//	cmds.addAll(getRefreshCmds())
 //log.trace "setMode: cmds(before)=${cmds}"
 	cmds
 }
 
+// Called from anywhere that needs the UI controls updated following a Set
+private List getRefreshCmds() {
+	log.debug "+++++ getRefreshCmds"
+	def cmds =[
+		new physicalgraph.device.HubAction("910005400102870301"),
+		new physicalgraph.device.HubAction("910005400101830101"),
+//		new physicalgraph.device.HubAction("91000541010100"),
+	]
+	cmds
+}
+
+private List getTestCmds() {
+	log.debug "+++++ getTestCmds"
+	def cmds =[
+//		new physicalgraph.device.HubAction("91000541010100"),
+//		zwave.manufacturerProprietaryV1.manufacturerProprietary(payload: "05400101830101")
+	]
+	cmds
+}
+
+
 def on() {
 	log.debug "+++++ on()"
     delayBetweenLog([
-//		zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint: 1, destinationEndPoint: 1, commandClass:37, command:1, parameter:[255]),
-//		zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint: 1, destinationEndPoint: 1, commandClass:37, command:2)
         zwave.basicV1.basicSet(value: 0xFF),
         zwave.basicV1.basicGet()
     ])
@@ -1397,100 +1561,192 @@ def on() {
 def off() {
 	log.debug "+++++ off()"
     delayBetweenLog([
-//		zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint: 1, destinationEndPoint: 1, commandClass:37, command:1, parameter:[0]),
-//		zwave.multiChannelV3.multiChannelCmdEncap(sourceEndPoint: 1, destinationEndPoint: 1, commandClass:37, command:2)
         zwave.basicV1.basicSet(value: 0x00),
         zwave.basicV1.basicGet()
     ])
 }
 
-//switch instance
-private List onMulti(value) {
-	log.debug "+++++ onMulti($value)"
+//Request Switch State
+private List getChanState(ch) {
+	log.debug "+++++ getChanState($ch)"
 	def cmds =[
-		zwave.multiInstanceV1.multiInstanceCmdEncap(instance: value, commandClass:37, command:1, parameter:[255]),
-		zwave.multiInstanceV1.multiInstanceCmdEncap(instance: value, commandClass:37, command:2)
+	    zwave.multiInstanceV1.multiInstanceCmdEncap(instance:ch).encapsulate(zwave.switchBinaryV1.switchBinaryGet())
 	]
 }
 
-private List offMulti(value) {
-	log.debug "+++++ offMulti($value)"
+// Set switch instance on/off
+private List setChanState(ch, on) {
+	log.debug "+++++ setChanState($ch, $on)"
 	def cmds =[
-		zwave.multiInstanceV1.multiInstanceCmdEncap(instance: value, commandClass:37, command:1, parameter:[0]),
-		zwave.multiInstanceV1.multiInstanceCmdEncap(instance: value, commandClass:37, command:2)
+		zwave.multiInstanceV1.multiInstanceCmdEncap(instance: ch).encapsulate(zwave.switchBinaryV1.switchBinarySet(switchValue: (on ? 0xFF : 0))),
 	]
+}
+
+
+// Set switch state and request report back
+private List setChanStateAndGet(ch, on) {
+	log.debug "+++++ setChanStateAndGet($ch, $on)"
+	def cmds = []
+	cmds = setChanState(ch, on)
+    cmds.addAll(getChanState(ch))
+	cmds
+}
+
+def List childOn(dni)  {
+	log.trace("childOn called in parent: dni=${dni} channelNumber(dni)=${channelNumber(dni)}")
+	delayBetweenLog(addRefreshCmds(cmdFromChild(channelNumber(dni), 0xFF)))
+}
+
+def List childOff(dni)  {
+	log.trace("childOff called in parent: dni=${dni} channelNumber(dni)=${channelNumber(dni)}")
+	delayBetweenLog(addRefreshCmds(cmdFromChild(channelNumber(dni), 0)))
+}
+
+def List refresh(dni)  {
+	log.trace("refresh called in parent: dni=${dni} channelNumber(dni)=${channelNumber(dni)}")
+//	delayBetweenLog(addRefreshCmds(cmdFromChild(channelNumber(dni), 0)))
+}
+
+private channelNumber(String dni) {
+	dni.split("-ep")[-1] as Integer
+}
+
+// On or Off from a child device. Take action depending on which type of child device
+private List cmdFromChild(int childNo, int val) {
+	def rslt = []
+	if (debugLevel > "0") {
+	    log.debug "+++++ cmdFromChild: childNo:$childNo  val:$val"
+    }
+
+    switch (childNo) {
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+	        rslt.addAll(setChanState(childNo, val))
+        break
+        case POOL_SPA_EP:
+			if (val) {
+	        	rslt.addAll(setSpaModeInternal())
+            } else {
+	        	rslt.addAll(setPoolModeInternal())
+            }
+        break
+        case getVSP_EP(1):
+        case getVSP_EP(2):
+        case getVSP_EP(3):
+        case getVSP_EP(4):
+        // Convert switch endpoint to a VSP speed
+			if (val) {
+				rslt.addAll(setVSPSpeedInternal( childNo - 6 ))
+           	} else {
+		        rslt.addAll(setVSPSpeedInternal( 0 ))
+            }
+        break
+    }
+	rslt
+}
+
+def List addRefreshCmds(List cmds)  {
+	cmds.addAll(getRefreshCmds())
+    cmds
 }
 
 // Called by switch presses on the circuit buttons.
-def List on1()  { delayBetweenLog(onMulti(1)) }
-def List on2()  { delayBetweenLog(onMulti(2)) }
-def List on3()  { delayBetweenLog(onMulti(3)) }
-def List on4()  { delayBetweenLog(onMulti(4)) }
-def List on5()  { delayBetweenLog(onMulti(5)) }
-def List off1() { delayBetweenLog(offMulti(1)) }
-def List off2() { delayBetweenLog(offMulti(2)) }
-def List off3() { delayBetweenLog(offMulti(3)) }
-def List off4() { delayBetweenLog(offMulti(4)) }
-def List off5() { delayBetweenLog(offMulti(5)) }
+def List on1()  { delayBetweenLog(addRefreshCmds(setChanState(1, 0xFF))) }
+def List on2()  { delayBetweenLog(addRefreshCmds(setChanState(2, 0xFF))) }
+def List on3()  { delayBetweenLog(addRefreshCmds(setChanState(3, 0xFF))) }
+def List on4()  { delayBetweenLog(addRefreshCmds(setChanState(4, 0xFF))) }
+def List on5()  { delayBetweenLog(addRefreshCmds(setChanState(5, 0xFF))) }
+def List off1() { delayBetweenLog(addRefreshCmds(setChanState(1, 0))) }
+def List off2() { delayBetweenLog(addRefreshCmds(setChanState(2, 0))) }
+def List off3() { delayBetweenLog(addRefreshCmds(setChanState(3, 0))) }
+def List off4() { delayBetweenLog(addRefreshCmds(setChanState(4, 0))) }
+def List off5() { delayBetweenLog(saddRefreshCmds(etChanState(5, 0))) }
 
-// Called by slider control.
-def List setVSPSpeed(sp) { delayBetweenLog(setVSPSpeedAndGet(sp)) }
+// Called by individual button methods below
+def List setVSPSpeed(sp)       {delayBetweenLog(setVSPSpeedAndGet(sp)) }
 // Called by switch presses on the VSP buttons.
-def List setVSPSpeed0() { delayBetweenLog(setVSPSpeed(0)) }
-def List setVSPSpeed1() { delayBetweenLog(setVSPSpeed(1)) }
-def List setVSPSpeed2() { delayBetweenLog(setVSPSpeed(2)) }
-def List setVSPSpeed3() { delayBetweenLog(setVSPSpeed(3)) }
-def List setVSPSpeed4() { delayBetweenLog(setVSPSpeed(4)) }
-def List setMode1() { delayBetweenLog(setMode(1)) }
-def List setMode2() { delayBetweenLog(setMode(2)) }
-def List setMode3() { delayBetweenLog(setMode(3)) }
-def List setMode4() { delayBetweenLog(setMode(4)) }
+def List setVSPSpeed0()        {delayBetweenLog(addRefreshCmds(setVSPSpeedInternal(0))) }
+def List setVSPSpeed1()        {delayBetweenLog(addRefreshCmds(setVSPSpeedInternal(1))) }
+def List setVSPSpeed2()        {delayBetweenLog(addRefreshCmds(setVSPSpeedInternal(2))) }
+def List setVSPSpeed3()        {delayBetweenLog(addRefreshCmds(setVSPSpeedInternal(3))) }
+def List setVSPSpeed4()        {delayBetweenLog(addRefreshCmds(setVSPSpeedInternal(4))) }
+def List setMode1()            {delayBetweenLog(addRefreshCmds(setMode(1))) }
+def List setMode2()            {delayBetweenLog(addRefreshCmds(setMode(2))) }
+def List setMode3()            {delayBetweenLog(addRefreshCmds(setMode(3))) }
+def List setMode4()            {delayBetweenLog(addRefreshCmds(setMode(4))) }
 
-def List setSpaMode() {delayBetweenLog(setSpaModeInternal()) }
-def List setPoolMode() {delayBetweenLog(setPoolModeInternal()) }
-def List togglePoolSpaMode() {delayBetweenLog(togglePoolSpaModeInternal()) }
+def List setSpaMode()          {delayBetweenLog(addRefreshCmds(setSpaModeInternal())) }
+def List setPoolMode()         {delayBetweenLog(addRefreshCmds(setPoolModeInternal())) }
+def List togglePoolSpaMode()   {delayBetweenLog(addRefreshCmds(togglePoolSpaModeInternal())) }
 
-def List quickSetSpa(degrees) {delayBetweenLog(setSpaSetpointInternal(degrees), 3000)}
-def List quickSetPool(degrees) {delayBetweenLog(setPoolSetpointInternal(degrees), 3000)}
-def List quickGetWaterTemp()  {delayBetweenLog(getWaterTemp()) }
+def List quickSetSpa(degrees)  {delayBetweenLog(addRefreshCmds(setSpaSetpointInternal("${degrees}".toDouble())))}
+def List quickSetPool(degrees) {delayBetweenLog(addRefreshCmds(setPoolSetpointInternal("${degrees}".toDouble())))}
+def List quickGetWaterTemp()   {delayBetweenLog(addRefreshCmds(getTestCmds())) }
+
+
+// Called from Parse for responses from the device
+def delayResponseLog(parm, dly=DELAY, responseFlg=true) {
+	delayBetweenLog(parm, dly, responseFlg)
+}
 
 // Called from all commands
-def delayBetweenLog(parm, dly=DELAY) {
+def delayBetweenLog(parm, dly=DELAY, responseFlg=false) {
+//	log.debug "delayBetweenLog parm[${parm.size}] dly=$dly responseFlg=${responseFlg}"
 	def lst = parm
 	def cmds =[]
 	def evts =[]
 	def devStr = ""
     def evtStr = ""
+    def fmt = ""
     if (!(parm in List)) {
     	lst = [parm]
     }
     lst.each {l ->
-//log.trace "l -> ${l}"
-		if (l instanceof physicalgraph.device.HubAction) {log.trace "instanceof physicalgraph.device.HubAction"}
-//        if (l instanceof physicalgraph.zwave.commands.associationv2.AssociationGroupingsGet) {log.trace "$l instanceof physicalgraph.zwave.commands.associationv2.AssociationGroupingsGet"}
-		//if (l instanceof physicalgraph.HubAction) {log.trace "delay instanceof physicalgraph.zwave.commands.associationv2.AssociationGroupingsGet"}
-        if (l instanceof String || l instanceof GString) {
+	    if (l instanceof List) {
+			log.warn "UNEXPECTED instanceOf List: l -> ${l}"
+        } else if (l in List) {
+			log.warn "UNEXPECTED in LIST: l -> ${l}"
+        } else {
+//			log.trace "l -> ${l}"
+        }
+		if (l instanceof physicalgraph.device.HubAction) {
             cmds << l
-            devStr = devStr.concat(", ${l}")
+            devStr = devStr.concat("\n<<<<< HubAction: $l")
+//        	log.trace "instanceof physicalgraph.device.HubAction"
+        } else if (l instanceof String || l instanceof GString) {
+        	if (l.take(5) == "Note:") {
+                evtStr = evtStr.concat("\n<<<<< Event: $l")
+            } else {
+                cmds << l
+                devStr = devStr.concat(", ${l}")
+            }
 //            log.trace "## String: $l"
         } else if (l instanceof List) {
             cmds << l
 //            log.trace "#### LIST: $l"
         } else if (l instanceof Map) {
 //          evts << l
-			sendEvent(l)
-			evtStr = evtStr.concat("\n<<<<< Event: $l")
+// example:	createEvent(name: "$sw", value: "$myParm", isStateChange: true, displayed: true, descriptionText: "($sw set to $myParm)")
+			if (device.currentValue(l.name) == l.value) {
+//            	log.debug "<<<<< Event unnecessary. name:${l.name} dev:${device.currentValue(l.name)} == evt:${l.value}"
+            } else {
+            	log.debug "<<<<< Event NECESSARY. name:${l.name} dev:${device.currentValue(l.name)} == evt:${l.value}"
+                evts << l
+//                sendEvent(l)
+                evtStr = evtStr.concat("\n<<<<< Event: $l")
+            }
 //            log.trace "## Map: $l"
         } else {
-            def fmt = l.format()
+        	if (responseFlg) {
+	            fmt = response(l)
+            } else {
+	            fmt = l.format()
+            }
             if (cmds) {
 				def c = cmds.last()			//check if there is already a delay prior to this
-//log.trace "cmds=${cmds} c=${c}"
-//	            if (c instanceof String) { log.trace "c is String take(6)=${c.take(6)}" }
-//	            if (c instanceof GString) { log.trace "c is GString take(6)=${c.take(6)}" }
-//	            if ((c instanceof String || c instanceof GString) && c.take(6) != "delay ") { log.trace "not = delay" }
-//	            if ((c instanceof String || c instanceof GString) && c.take(6) == "delay ") { log.trace "= delay" }
-
 	            if (!(c instanceof String || c instanceof GString) || c.take(6) != "delay ") {
 	                cmds << "delay $dly"
     	            devStr = devStr.concat(", delay $dly")
@@ -1504,19 +1760,19 @@ def delayBetweenLog(parm, dly=DELAY) {
     evts.addAll(cmds)
 	if (evts) {
         if (debugLevel > "0") {
-            log.debug "<<<<< dly:$dly/${DELAY}${evtStr}${devStr}"
+            log.debug "<<<<< rspFlg=${responseFlg} dly:$dly/${DELAY}${evtStr}${devStr}"
         }
 		evts
     } else {
         if (debugLevel > "0") {
-            log.debug "<<<<< dly:$dly/${DELAY} No Commands or Events"
+            log.debug "<<<<< rspFlg=${responseFlg} dly:$dly/${DELAY} No Commands or Events"
         }
     	null
     }
 }
 
 // Only called from parse().
-def delayResponseLog(parm, dly=DELAY) {
+def old_delayResponseLog(parm, dly=DELAY) {
 	def lst = parm
 	def cmds =[]
 	def evts =[]
@@ -1526,18 +1782,25 @@ def delayResponseLog(parm, dly=DELAY) {
     	lst = [parm]
     }
     lst.each {l ->
-        if (l instanceof physicalgraph.device.HubAction) {log.trace "instanceof physicalgraph.device.HubAction"}
-//      if (l instanceof physicalgraph.zwave.commands.associationv2.AssociationGroupingsGet) {log.trace "$l instanceof physicalgraph.zwave.commands.associationv2.AssociationGroupingsGet"}
-//		if (l instanceof physicalgraph.HubAction) {log.trace "delay instanceof physicalgraph.zwave.commands.associationv2.AssociationGroupingsGet"}
-        if (l instanceof String) {
+        if (l instanceof physicalgraph.device.HubAction) {
+            cmds << l
+            devStr = devStr.concat("\n<<<<< HubAction: $l")
+//        	log.trace "instanceof physicalgraph.device.HubAction"
+        } else if (l instanceof String) {
             cmds << l
 //            log.trace "## String: $l"
         } else if (l instanceof List) {
             cmds << l
 //            log.trace "#### LIST: $l"
         } else if (l instanceof Map) {
-            evts << l
-            evtStr = evtStr.concat("\n<<<<< Event: $l")
+// example:	createEvent(name: "$sw", value: "$myParm", isStateChange: true, displayed: true, descriptionText: "($sw set to $myParm)")
+			if (device.currentValue(l.name) == l.value) {
+//            	log.debug "<<<<< Event unnecessary. name:${l.name} dev:${device.currentValue(l.name)} == evt:${l.value}"
+            } else {
+                evts << l
+                evtStr = evtStr.concat("\n<<<<< Event: $l")
+            	log.debug "<<<<< Event NECESSARY. name:${l.name} dev:${device.currentValue(l.name)} == evt:${l.value}"
+            }
 //            log.trace "## Map: $l"
         } else {
             def fmt = response(l)
