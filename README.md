@@ -10,6 +10,18 @@ Current Author: @KeithR26
 Original Author: @bigpunk6
 Full credit goes to bigpunk6, without whom this derivation never would have come to light.
 
+Release Notes, Version 3.00  07/05/2018:
+
+1. Major update. In 2017 SmartThings withdrew the "Multi-channel SmartApp" which provided important functionality to the PE653 Device Type Handler (DTH). This is what allowed each of the 5 switches, Pool/Spa mode and VSP Speeds to be represented as simple individual  switches in the "Things" page of the ST mobile App. SmartThings now recommends the "Composite Device Type" model which implements the "Child" switches as part of the DTH without requiring a separate SmartApp. It does however require  configuring a second Device Handler to support the Child switches. This however is a simple one-time setup that is covered in the Installation Instructions.
+
+2. The VSP and Pool/Spa mode implementation was kludgy because the means of setting these modes is undocumented by Intermatic. The initial implementation turned VSP and Pool/Spa schedules on and off to control those modes, but this was incompatible with the PE953 remote which caused unexpected behavior and meant the ST App could not override settings made by the remote. As a result of implementing a Z-Wave sniffer I was able to trace the actual messages the remote sends to the controller to reverse engineer the undocumented commands. As a result I was able to scrap the schedule based implementation and directly control the modes in the same way as the remote does it. This means the ST app can read the current speed and Pool/Spa settings even if they are sset by the remote or even on the 653 controller itself.
+
+3. The sniffer also uncovered how Intermatic is using the "Manufacturer Proprietary" Z-Wave commands to read values for the Air Temperature, Heater mode on/off and the Controller's clock. To display this information in a balanced and esthetic format I adjusted the layout to be more efficient and usable. Let me know your thoughts.
+
+4. Removed the Settings/Preferences "default" values so that the Android configuration can be saved. The user was required to "set" the values manually anyway, so the default was just misleading. Be sure to set all the Preferences to reasonable values.
+
+5. A few minor changes were made to improve compatibility with Hubitat. More changes will likely be necessary however.
+
 Release Notes, Version 2.03  05/01/2017:
 
 1. You can now quickly and easily refresh the water temperature display by tapping the temperature display. Unlike the "refresh" botton, which issues about a dozen commands and takes some time, tapping the temperature only sends the requst to refresh the temperature display, therefore it is much faster. The temperature is also refreshed whenever you use any of the four macro buttons. Still no luck with the poll(). 
