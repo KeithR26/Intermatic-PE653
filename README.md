@@ -12,7 +12,25 @@ Full credit goes to bigpunk6, without whom this derivation never would have come
 
 Release Notes, Version 3.00  07/05/2018:
 
-1. Major update. In 2017 SmartThings withdrew the "Multi-channel SmartApp" which provided important functionality to the PE653 Device Type Handler (DTH). This is what allowed each of the 5 switches, Pool/Spa mode and VSP Speeds to be represented as simple individual  switches in the "Things" page of the ST mobile App. SmartThings now recommends the "Composite Device Type" model which implements the "Child" switches as part of the DTH without requiring a separate SmartApp. It does however require  configuring a second Device Handler to support the Child switches. This however is a simple one-time setup that is covered in the Installation Instructions.
+1. Major update. In 2017 SmartThings withdrew the "Multi-channel SmartApp" which provided important functionality to the PE653 Device Type Handler (DTH). This is what allowed each of the 5 switches, Pool/Spa mode and VSP Speeds to be represented as simple individual  switches in the "Things" page of the ST mobile App. SmartThings now recommends the "Composite Device Type" model which implements the "Child" switches as part of the DTH without requiring a separate SmartApp. It does however require  configuring a second Device Handler to support the Child switches. This however is a simple one-time setup that is covered in the Installation Instructions (https://raw.githubusercontent.com/KeithR26/Intermatic-PE653/master/Installation.txt)
+
+The DTH will create at least 5 Child devices corresponding to the 5 switches. If your device is named "Pool Controller" then the Child devics will be named:
+Pool Controller - Switch 1
+Pool Controller - Switch 2
+Pool Controller - Switch 3
+Pool Controller - Switch 4
+Pool Controller - Switch 5
+
+If you have both Pool and Spa, then you will also get a Child Device:
+Pool Controller - Spa Mode
+
+If you have a Variable Speed Pump (VSP) then you will also get:
+Pool Controller - Speed 1
+Pool Controller - Speed 2
+Pool Controller - Speed 3
+Pool Controller - Speed 4
+
+You are free to rename these Child Devices. Then yiou can use these Child Devices in ST SmartApps and in Alexa integration.
 
 2. The VSP and Pool/Spa mode implementation was kludgy because the means of setting these modes is undocumented by Intermatic. The initial implementation turned VSP and Pool/Spa schedules on and off to control those modes, but this was incompatible with the PE953 remote which caused unexpected behavior and meant the ST App could not override settings made by the remote. As a result of implementing a Z-Wave sniffer I was able to trace the actual messages the remote sends to the controller to reverse engineer the undocumented commands. As a result I was able to scrap the schedule based implementation and directly control the modes in the same way as the remote does it. This means the ST app can read the current speed and Pool/Spa settings even if they are sset by the remote or even on the 653 controller itself.
 
